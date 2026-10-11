@@ -145,10 +145,10 @@ export const EvaluationBenchmarks: React.FC<EvaluationBenchmarksProps> = ({ fore
         <div className="bg-white rounded-xl border border-slate-200 p-4 shadow-xs">
           <div className="flex items-center gap-2 font-bold text-slate-900 mb-2">
             <Award className="w-4 h-4 text-indigo-600" />
-            <span>{uqCoverage.toFixed(1)}% Epistemic UQ Coverage</span>
+            <span>Empirical 95% Interval Coverage</span>
           </div>
           <p className="text-slate-600 leading-relaxed">
-            The 50-pass Monte Carlo Dropout uncertainty ribbon demonstrates exceptional calibration, capturing <strong>{uqCoverage.toFixed(1)}%</strong> of ground-truth observations within the predicted 95% confidence interval across the entire profile depth.
+            After validation-fitted rescaling: <strong>temperature 96.1%, salinity 94.6%</strong> (95% nominal, 5 unseen test floats, 916 windows; raw dropout coverage: temp 57.9%, sal 52.5%).
           </p>
         </div>
       </div>

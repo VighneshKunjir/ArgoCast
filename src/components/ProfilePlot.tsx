@@ -802,7 +802,7 @@ export const ProfilePlot: React.FC<ProfilePlotProps> = ({
           <Info className="w-4 h-4 text-cyan-400 shrink-0" />
           <span>
             Target Profile: <strong>Cycle {forecast.predicted_cycle}</strong> forecasted from sequence [Cycles {forecast.input_sequence_cycles.join(', ')}].
-            Evaluation RMSE: <strong className="text-emerald-400">0.228°C</strong> (&gt;52% reduction over persistence 0.482°C).
+            Evaluation RMSE: <strong className="text-emerald-400">0.576°C</strong>, persistence 0.633°C (9.0% lower). Across 10 random splits the RMSE difference is not significant (see paper Table 4)..
           </span>
         </div>
         <div className="flex items-center gap-2">

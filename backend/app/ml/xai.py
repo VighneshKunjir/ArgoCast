@@ -487,6 +487,201 @@ def xai_to_dict(xai_result: Dict) -> Dict:
     }
 
 
+def compute_smoothgrad(
+    model: PhysicsInformedBiLSTM,
+    input_tensor: torch.Tensor,
+    target_variable: str = "temp",
+    target_depth_idx: int = 4,
+    n_samples: int = 50,
+    noise_scale: float = 0.1,
+    baseline_tensor: Optional[torch.Tensor] = None,
+    n_steps: int = 50,
+) -> Tuple[np.ndarray, float]:
+    """
+    Compute SmoothGrad attributions by averaging Integrated Gradients over noisy inputs.
+    
+    SmoothGrad reduces noise in gradient-based attributions by adding Gaussian noise
+    to the input and averaging the resulting Integrated Gradients.
+    
+    Uses Captum's NoiseTunnel with SmoothGrad mode.
+    
+    Args:
+        model: PhysicsInformedBiLSTM model
+        input_tensor: Input tensor (1, 3, 32)
+        target_variable: "temp" or "sal"
+        target_depth_idx: Target depth index (0-15)
+        n_samples: Number of noise samples to average
+        noise_scale: Standard deviation of Gaussian noise (relative to input std)
+        baseline_tensor: Baseline for Integrated Gradients
+        n_steps: Number of integration steps for IG
+    
+    Returns:
+        (attributions, delta) - attributions shape (1, 3, 32), convergence delta
+    """
+    from captum.attr import NoiseTunnel, IntegratedGradients
+    from app.ml.model import SingleOutputModelWrapper
+    
+    model.eval()
+    device = next(model.parameters()).device
+    input_tensor = input_tensor.to(device)
+    
+    # Create wrapper for single-output attribution
+    wrapper = SingleOutputModelWrapper(
+        model, target_variable=target_variable, target_depth_idx=target_depth_idx
+    )
+    wrapper.eval()
+    
+    if baseline_tensor is None:
+        baseline_tensor = torch.zeros_like(input_tensor)
+    baseline_tensor = baseline_tensor.to(device)
+    
+    ig = IntegratedGradients(wrapper)
+    nt = NoiseTunnel(ig)
+    
+    # Generate noisy samples and average IG attributions
+    all_attributions = []
+    for _ in range(n_samples):
+        noise = torch.randn_like(input_tensor) * noise_scale
+        noisy_input = input_tensor + noise
+        
+        attributions = nt.attribute(
+            noisy_input,
+            baselines=baseline_tensor,
+            n_steps=n_steps,
+            nt_type='smoothgrad',
+            nt_samples=n_samples,
+            return_convergence_delta=False,
+        )
+        all_attributions.append(attributions.detach().cpu().numpy())
+    
+    # Average attributions
+    mean_attributions = np.mean(np.stack(all_attributions, axis=0), axis=0)
+    
+    # Compute convergence delta on original input (without noise)
+    _, delta = ig.attribute(
+        input_tensor,
+        baselines=baseline_tensor,
+        n_steps=n_steps,
+        return_convergence_delta=True,
+    )
+    
+    return mean_attributions, delta.item()
+
+
+def compute_expected_gradients(
+    model: PhysicsInformedBiLSTM,
+    input_tensor: torch.Tensor,
+    target_variable: str = "temp",
+    target_depth_idx: int = 4,
+    n_samples: int = 50,
+    reference_dataset: Optional[torch.Tensor] = None,
+) -> Tuple[np.ndarray, float]:
+    """
+    Compute Expected Gradients attributions (Erion et al., 2021).
+    
+    Expected Gradients averages Integrated Gradients over multiple baselines
+    sampled from a reference distribution (e.g., training data), providing
+    a more robust attribution than single-baseline IG.
+    
+    Args:
+        model: PhysicsInformedBiLSTM model
+        input_tensor: Input tensor (1, 3, 32)
+        target_variable: "temp" or "sal"
+        target_depth_idx: Target depth index (0-15)
+        n_samples: Number of baseline samples from reference distribution
+        reference_dataset: Tensor of reference samples (N, 3, 32) to sample baselines from
+    
+    Returns:
+        (attributions, delta) - attributions shape (1, 3, 32), mean convergence delta
+    """
+    from captum.attr import IntegratedGradients
+    from app.ml.model import SingleOutputModelWrapper
+    
+    model.eval()
+    device = next(model.parameters()).device
+    input_tensor = input_tensor.to(device)
+    
+    # Create wrapper for single-output attribution
+    wrapper = SingleOutputModelWrapper(
+        model, target_variable=target_variable, target_depth_idx=target_depth_idx
+    )
+    wrapper.eval()
+    
+    ig = IntegratedGradients(wrapper)
+    
+    # If no reference dataset, use zeros + random noise around input
+    if reference_dataset is None:
+        # Sample baselines from Gaussian around input
+        baselines = input_tensor + torch.randn(n_samples, *input_tensor.shape[1:], device=device) * 0.1
+    else:
+        # Sample from reference dataset
+        ref_size = reference_dataset.size(0)
+        indices = torch.randint(0, ref_size, (n_samples,), device=device)
+        baselines = reference_dataset[indices].to(device)
+    
+    all_attributions = []
+    deltas = []
+    
+    for i in range(n_samples):
+        baseline = baselines[i:i+1]
+        attributions, delta = ig.attribute(
+            input_tensor,
+            baselines=baseline,
+            n_steps=50,
+            return_convergence_delta=True,
+        )
+        all_attributions.append(attributions.detach().cpu().numpy())
+        deltas.append(delta.item())
+    
+    # Average attributions
+    mean_attributions = np.mean(np.stack(all_attributions, axis=0), axis=0)
+    mean_delta = np.mean(deltas)
+    
+    return mean_attributions, mean_delta
+
+
+def compute_integrated_gradients_with_smoothing(
+    model: PhysicsInformedBiLSTM,
+    input_tensor: torch.Tensor,
+    target_variable: str = "temp",
+    target_depth_idx: int = 4,
+    baseline_tensor: Optional[torch.Tensor] = None,
+    n_steps: int = 50,
+    smoothing: str = "none",  # "none", "smoothgrad", "expected_gradients"
+    n_smoothing_samples: int = 50,
+    noise_scale: float = 0.1,
+    reference_dataset: Optional[torch.Tensor] = None,
+) -> Tuple[np.ndarray, float]:
+    """
+    Unified interface for IG with optional smoothing.
+    
+    Args:
+        smoothing: "none" | "smoothgrad" | "expected_gradients"
+        n_smoothing_samples: Number of samples for smoothing methods
+        noise_scale: Noise scale for SmoothGrad
+        reference_dataset: Reference data for Expected Gradients
+    
+    Returns:
+        (attributions, delta)
+    """
+    if smoothing == "none":
+        return compute_integrated_gradients(
+            model, input_tensor, baseline_tensor, target_variable, target_depth_idx, n_steps
+        )
+    elif smoothing == "smoothgrad":
+        return compute_smoothgrad(
+            model, input_tensor, target_variable, target_depth_idx,
+            n_smoothing_samples, noise_scale=0.1, baseline_tensor=baseline_tensor
+        )
+    elif smoothing == "expected_gradients":
+        return compute_expected_gradients(
+            model, input_tensor, target_variable, target_depth_idx,
+            n_smoothing_samples, reference_dataset
+        )
+    else:
+        raise ValueError(f"Unknown smoothing method: {smoothing}")
+
+
 if __name__ == "__main__":
     print("Testing XAI module imports...")
     print(f"Captum available: {CAPTUM_AVAILABLE}")

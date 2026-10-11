@@ -19,3 +19,10 @@ arabian_sea_top60_floats.txt
 *.png
 venv/
 graphify-out/
+debug_*.py
+backend/app/ml/artifacts/experiments/*.csv
+backend/app/ml/artifacts/experiments/smoke/*.csv
+backend/app/ml/artifacts/experiments/lam50/*csv
+backend/app/ml/artifacts/experiments/lam100/*csv
+backend/app/ml/artifacts/experiments/lam10_gpu/*csv
+*pdf
