@@ -20,9 +20,24 @@ arabian_sea_top60_floats.txt
 venv/
 graphify-out/
 debug_*.py
+*pdf
 backend/app/ml/artifacts/experiments/*.csv
 backend/app/ml/artifacts/experiments/smoke/*.csv
 backend/app/ml/artifacts/experiments/lam50/*csv
 backend/app/ml/artifacts/experiments/lam100/*csv
 backend/app/ml/artifacts/experiments/lam10_gpu/*csv
-*pdf
+
+# Extended Arabian Sea evaluation (2000-2026): large generated files.
+# Everything below can be rebuilt with run_all.py.
+backend/experiments/arabian_sea_2000_2026/data/raw/
+backend/experiments/arabian_sea_2000_2026/data/processed/*.npz
+backend/experiments/arabian_sea_2000_2026/data/processed/*.csv.gz
+backend/experiments/arabian_sea_2000_2026/data/*.txt.gz
+backend/experiments/arabian_sea_2000_2026/outputs/models/
+backend/experiments/arabian_sea_2000_2026/outputs/predictions/
+backend/experiments/arabian_sea_2000_2026/outputs/tables/*.npz
+
+# Keep the experiment figures used in the papers and slides
+# (overrides the global *.png and *pdf rules above).
+!backend/experiments/arabian_sea_2000_2026/outputs/figures/*.png
+!backend/experiments/arabian_sea_2000_2026/outputs/figures/*.pdf

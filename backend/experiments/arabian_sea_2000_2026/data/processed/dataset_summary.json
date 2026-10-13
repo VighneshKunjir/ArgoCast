@@ -1,0 +1,58 @@
+{
+  "n_profiles": 36164,
+  "n_floats": 321,
+  "date_min": "2001-12-18",
+  "date_max": "2026-10-11",
+  "modes_kept": "DA",
+  "mode_counts": {
+    "D": 31313,
+    "A": 4851
+  },
+  "stable_fraction_teos10": 0.8463665523725251,
+  "profiles_per_year": {
+    "2001": 4,
+    "2002": 326,
+    "2003": 588,
+    "2004": 516,
+    "2005": 492,
+    "2006": 611,
+    "2007": 943,
+    "2008": 1047,
+    "2009": 1264,
+    "2010": 1148,
+    "2011": 1288,
+    "2012": 1983,
+    "2013": 2146,
+    "2014": 2982,
+    "2015": 3771,
+    "2016": 3720,
+    "2017": 2824,
+    "2018": 2531,
+    "2019": 1953,
+    "2020": 1382,
+    "2021": 904,
+    "2022": 810,
+    "2023": 654,
+    "2024": 1236,
+    "2025": 645,
+    "2026": 396
+  },
+  "cleaning_counts": {
+    "seen": 74195,
+    "kept": 36164,
+    "fewer_than_10_good_levels": 10608,
+    "outside_box": 15455,
+    "insufficient_depth_coverage": 7229,
+    "no_position_or_date": 226,
+    "descending_profile": 56,
+    "mode_R_excluded": 4271,
+    "bad_position_or_date_qc": 186,
+    "duplicate_cycle_removed": 0
+  },
+  "unreadable_files": {},
+  "coverage_rule_dbar": [
+    10.0,
+    950.0
+  ],
+  "elapsed_s": 54.7
+}
