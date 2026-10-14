@@ -41,3 +41,10 @@ backend/experiments/arabian_sea_2000_2026/outputs/tables/*.npz
 # (overrides the global *.png and *pdf rules above).
 !backend/experiments/arabian_sea_2000_2026/outputs/figures/*.png
 !backend/experiments/arabian_sea_2000_2026/outputs/figures/*.pdf
+
+# 10-model benchmark: large generated files (rebuild with run_benchmark.py)
+backend/experiments/benchmark_10_models/outputs/*/models/
+backend/experiments/benchmark_10_models/outputs/*/predictions/
+backend/experiments/benchmark_10_models/outputs/_quick/
+!backend/experiments/benchmark_10_models/outputs/*/figures/*.png
+!backend/experiments/benchmark_10_models/outputs/*/figures/*.pdf
