@@ -470,18 +470,22 @@ def run(args):
         import lightgbm as lgb
         print("LightGBM: 32 regressors with early stopping ...", flush=True)
         t0 = time.time()
+        # Native API (lgb.train) rather than LGBMRegressor: the scikit-learn wrapper breaks
+        # when the installed scikit-learn is newer than the LightGBM release.
+        params = dict(objective="regression", learning_rate=0.05, num_leaves=31, min_child_samples=20,
+                      subsample=0.8, subsample_freq=1, colsample_bytree=0.8, reg_lambda=1.0,
+                      seed=42, num_threads=max(args.lgb_jobs, 0), verbose=-1)
         regs, iters = [], []
         for j in range(Ytr.shape[1]):
-            r = lgb.LGBMRegressor(n_estimators=args.lgb_estimators, learning_rate=0.05, num_leaves=31,
-                                  min_child_samples=20, subsample=0.8, subsample_freq=1, colsample_bytree=0.8,
-                                  reg_lambda=1.0, random_state=42, n_jobs=args.lgb_jobs, verbose=-1)
-            r.fit(Xtr_f, Ytr[:, j], eval_set=[(Xva_f, Yva[:, j])],
-                  callbacks=[lgb.early_stopping(50, verbose=False)])
-            regs.append(r); iters.append(int(r.best_iteration_ or args.lgb_estimators))
+            dtr = lgb.Dataset(Xtr_f, Ytr[:, j], free_raw_data=False)
+            dva = lgb.Dataset(Xva_f, Yva[:, j], reference=dtr, free_raw_data=False)
+            b = lgb.train(params, dtr, num_boost_round=args.lgb_estimators, valid_sets=[dva],
+                          callbacks=[lgb.early_stopping(50, verbose=False)])
+            regs.append(b); iters.append(int(b.best_iteration or args.lgb_estimators))
         fit_s = time.time() - t0
-        p, ms = timed_predict(lambda: np.stack([r.predict(Xte_f, num_iteration=r.best_iteration_) for r in regs], 1))
+        p, ms = timed_predict(lambda: np.stack([b.predict(Xte_f, num_iteration=b.best_iteration) for b in regs], 1))
         preds["LightGBM"] = sc.inv(p)
-        n_leaves = sum(int(r.booster_.trees_to_dataframe()["node_index"].shape[0]) for r in regs)
+        n_leaves = sum(int(b.trees_to_dataframe()["node_index"].shape[0]) for b in regs)
         info_m["LightGBM"] = {"n_params": n_leaves, "fit_seconds": fit_s, "infer_ms_per_window": ms,
                               "settings": f"lr 0.05, 31 leaves, subsample 0.8, colsample 0.8, early stop 50 on val; "
                                           f"trees per output median {int(np.median(iters))} (range {min(iters)}-{max(iters)})",
@@ -489,7 +493,7 @@ def run(args):
         # TreeSHAP-free summary: gain importance aggregated by input time step and variable
         gain = np.zeros(96)
         for r in regs:
-            gain += r.booster_.feature_importance("gain")
+            gain += r.feature_importance("gain")
         gain = gain.reshape(3, 32) / gain.sum()
         extras["lightgbm_gain_by_step"] = gain.sum(1).tolist()
         extras["lightgbm_gain_by_step_var"] = {"temp": gain[:, :16].sum(1).tolist(), "sal": gain[:, 16:].sum(1).tolist()}
