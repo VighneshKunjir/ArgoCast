@@ -3,7 +3,8 @@
 
 Models (all forecast the full next-cycle 16-level T and S profile from 3 past cycles)
   1  Persistence               next profile = last observed profile (t-1)
-  2  Climatology               monthly mean profile of the training targets
+  2  Climatology (regional)    monthly mean profile of the training targets over the whole region
+     Climatology (local)       monthly mean profile per lat/lon grid cell (cell size chosen on validation)
   3  Ridge                     linear regression on the 96 inputs, alpha chosen on validation
   4  LightGBM                  one gradient-boosted tree model per output (32), early stopping on validation
   5  GRU                       2-layer GRU, 128 units
@@ -31,8 +32,15 @@ Examples
   python run_benchmark.py --dataset arabian2000 --split chronological
   python run_benchmark.py --dataset arabian2000 --split unseen_floats --seeds 42
 
-Outputs: outputs/<dataset>_<split>/ metrics.json, metrics.csv, per_depth_*.csv,
-         figures/*.png|pdf, predictions/*.npz, models/*.pt, RESULTS.md
+Outputs per run (outputs/<dataset>_<split>/)
+  RESULTS.md                  main table, bootstrap CIs, seed stability, paired comparison, per-depth, cost
+  METRICS_1_7.md              error size, agreement, skill, where errors occur, derived ocean quantities,
+                              physical consistency, uncertainty (MC dropout)  - see metrics_extra.py
+  CLASSIFICATION_METRICS.md   direction of change and stability detection (accuracy, precision, recall, F1)
+  *.json / *.csv              every number, including one row per model and seed
+  figures/, predictions/, models/
+Combined across runs (outputs/)
+  BENCHMARK_10_MODELS_RESULTS.md, METRICS_1_7_COMBINED.md, CLASSIFICATION_METRICS_COMBINED.md
 """
 from __future__ import annotations
 
@@ -62,6 +70,7 @@ sys.path.insert(0, str(HERE))
 
 from app.ml.loss import PhysicsConstrainedLoss  # noqa: E402
 from models import build, n_params  # noqa: E402
+import metrics_extra as mx  # noqa: E402
 
 DEPTHS = np.array([5, 20, 50, 75, 100, 150, 200, 250, 300, 400, 500, 600, 700, 800, 900, 1000], float)
 N_LEV = 16
@@ -71,17 +80,18 @@ THERM_IDX = [2, 3, 4, 5]
 DEEP_IDX = [10, 11, 12, 13, 14, 15]
 ARCTIC_WMOS = {6903058, 6903059, 6903060, 6903062, 6903063}
 
-MODEL_ORDER = ["Persistence", "Climatology", "Ridge", "LightGBM", "GRU", "Seq2Seq LSTM + attention",
+MODEL_ORDER = ["Persistence", "Climatology (regional)", "Climatology (local)", "Ridge", "LightGBM", "GRU", "Seq2Seq LSTM + attention",
                "TCN", "DLinear", "N-HiTS", "TFT", "Bi-LSTM (MSE only)", "FloatChat Bi-LSTM"]
 NEURAL = ["GRU", "Seq2Seq LSTM + attention", "TCN", "DLinear", "N-HiTS", "TFT",
           "Bi-LSTM (MSE only)", "FloatChat Bi-LSTM"]
 REFERENCE = "FloatChat Bi-LSTM"
 COLORS = {
-    "Persistence": "#999999", "Climatology": "#CC79A7", "Ridge": "#E69F00", "LightGBM": "#56B4E9",
+    "Persistence": "#999999", "Climatology (regional)": "#CC79A7", "Climatology (local)": "#882255", "Ridge": "#E69F00", "LightGBM": "#56B4E9",
     "GRU": "#8C6D31", "Seq2Seq LSTM + attention": "#D55E00", "TCN": "#7F3C8D", "DLinear": "#F0E442",
     "N-HiTS": "#11A579", "TFT": "#E73F74", "Bi-LSTM (MSE only)": "#009E73", "FloatChat Bi-LSTM": "#0072B2",
 }
-SHORT = {"Seq2Seq LSTM + attention": "Seq2Seq+Attn", "Bi-LSTM (MSE only)": "Bi-LSTM (MSE)",
+SHORT = {"Climatology (regional)": "Clim (regional)", "Climatology (local)": "Clim (local)",
+         "Seq2Seq LSTM + attention": "Seq2Seq+Attn", "Bi-LSTM (MSE only)": "Bi-LSTM (MSE)",
          "FloatChat Bi-LSTM": "FloatChat"}
 
 
@@ -333,11 +343,12 @@ def make_figures(fig_dir, tag, results, extras):
             ax.errorbar(x, v, yerr=[np.clip(v - ci[:, 0], 0, None), np.clip(ci[:, 1] - v, 0, None)],
                         fmt="none", ecolor="black", capsize=2, lw=0.7)
             lo = min(ci[:, 0].min(), v.min())
-            hi = max(ci[:, 1][[m != "Climatology" for m in models]].max(), v[[m != "Climatology" for m in models]].max())
-            if results.get("Climatology", {}).get(key, 0) > 1.6 * hi:
+            keep = np.array([not m.startswith("Climatology") for m in models])
+            hi = max(ci[:, 1][keep].max(), v[keep].max())
+            if (v[~keep] > 1.6 * hi).any():
                 ax.set_ylim(lo * 0.9, hi * 1.08)
-                i = models.index("Climatology")
-                ax.annotate(f"{v[i]:.3f}", (i, hi * 1.05), ha="center", fontsize=7)
+                for i in np.where(~keep & (v > 1.6 * hi))[0]:
+                    ax.annotate(f"{v[i]:.3f}", (i, hi * 1.05), ha="center", fontsize=7)
         else:
             obs = extras["observed_inversion_teos10_pct"]
             ax.axhline(obs, color="black", ls="--", lw=0.8, label=f"observed profiles {obs:.1f}%")
@@ -349,7 +360,7 @@ def make_figures(fig_dir, tag, results, extras):
 
     fig, axes = plt.subplots(1, 3, figsize=(11, 4.3), sharey=True)
     for m in models:
-        if m == "Climatology":
+        if m.startswith("Climatology"):
             continue
         st = dict(color=COLORS[m], lw=2.2 if m == REFERENCE else 1.0, ls="--" if m == "Persistence" else "-")
         axes[0].plot(results[m]["per_depth_temp_rmse"], DEPTHS, label=SHORT.get(m, m), **st)
@@ -434,6 +445,13 @@ def run(args):
     Yva = sc.Y(va["yT"], va["yS"])
 
     preds, info_m, seed_rows, histories, extras = {}, {}, {}, {}, {}
+    ext_seeds, cls_seeds, uq_first = {}, {}, {}
+
+    # Location-by-month climatology: a baseline row and the reference for ACC / skill vs climatology.
+    clim_local, clim_info = mx.fit_climatology(parts["train"], va)
+    ctx = mx.make_context(te, clim_local)
+    print(f"Local climatology: {clim_info['cell_deg']:g} deg cells, {clim_info['n_cells_used']} cell-months, "
+          f"{ctx['clim_cell_share'] * 100:.1f}% of test windows covered by a cell mean", flush=True)
 
     def timed_predict(fn):
         t0 = time.time(); p = fn(); return p, (time.time() - t0) / len(Xte_s) * 1000
@@ -441,14 +459,19 @@ def run(args):
     if "Persistence" in wanted:
         preds["Persistence"] = (te["X"][:, 2, :N_LEV].astype(float), te["X"][:, 2, N_LEV:].astype(float))
         info_m["Persistence"] = {"n_params": 0, "fit_seconds": 0.0, "settings": "next = last observed profile"}
-    if "Climatology" in wanted:
+    if "Climatology (regional)" in wanted:
         m_tr = parts["train"]["meta"]["month"].to_numpy()
         clT = {m: parts["train"]["yT"][m_tr == m].mean(0) for m in range(1, 13) if (m_tr == m).any()}
         clS = {m: parts["train"]["yS"][m_tr == m].mean(0) for m in range(1, 13) if (m_tr == m).any()}
         gT, gS = parts["train"]["yT"].mean(0), parts["train"]["yS"].mean(0)
         mt = te["meta"]["month"].to_numpy()
-        preds["Climatology"] = (np.stack([clT.get(m, gT) for m in mt]).astype(float), np.stack([clS.get(m, gS) for m in mt]).astype(float))
-        info_m["Climatology"] = {"n_params": 0, "fit_seconds": 0.0, "settings": f"monthly means of training targets ({len(clT)} months)"}
+        preds["Climatology (regional)"] = (np.stack([clT.get(m, gT) for m in mt]).astype(float), np.stack([clS.get(m, gS) for m in mt]).astype(float))
+        info_m["Climatology (regional)"] = {"n_params": 0, "fit_seconds": 0.0, "settings": f"monthly means of training targets ({len(clT)} months)"}
+    if "Climatology (local)" in wanted:
+        preds["Climatology (local)"] = (ctx["cT"].copy(), ctx["cS"].copy())
+        info_m["Climatology (local)"] = {"n_params": 0, "fit_seconds": 0.0, "climatology": clim_info,
+                                         "settings": f"{clim_info['cell_deg']:g} deg cells x calendar month, >= "
+                                                     f"{clim_info['min_profiles_per_cell']} profiles per cell, regional fallback"}
 
     if "Ridge" in wanted:
         t0 = time.time()
@@ -500,8 +523,9 @@ def run(args):
         print(f"  done in {fit_s:.0f}s", flush=True)
 
     Xte_t = torch.tensor(Xte_s, device=device)
+    Xva_t = torch.tensor(sc.X(va["X"]), device=device)
     for name in [m for m in NEURAL if m in wanted]:
-        seed_rows[name] = []
+        seed_rows[name], ext_seeds[name], cls_seeds[name] = [], [], []
         for j, seed in enumerate(args.seeds):
             model, hist, el = train_neural(name, parts, sc, seed, args, device)
             p, ms = timed_predict(lambda: predict(model, Xte_t))
@@ -527,6 +551,18 @@ def run(args):
                     w = model.last_var_weights.mean(0).cpu().numpy()
                     extras["tft_var_weights_by_step"] = w.sum(1).tolist()
                     extras["tft_var_weights_by_variable"] = {"temp": float(w[:, :16].sum() / w.sum()), "sal": float(w[:, 16:].sum() / w.sum())}
+            # extended metrics (1-7 and classification view) for this seed
+            m17 = mx.metrics_1_6(pT, pS, ctx)
+            dd = m17.pop("_derived_arrays")
+            t0 = time.time()
+            uq = mx.mc_dropout(model, Xva_t, Xte_t, va, te, sc, args.mc_passes, seed) if args.mc_passes > 0 else None
+            ext_seeds[name].append({"seed": seed, **mx.flat_1_7(m17, uq)})
+            cls_seeds[name].append({"seed": seed, **mx.flat_cls(mx.classification(pT, pS, ctx, dd))})
+            if uq:
+                print(f"{'':26s}   MC dropout: T coverage95 raw {uq['T']['coverage95_raw']:.3f}, "
+                      f"calibrated {uq['T']['coverage95_cal']:.3f} ({time.time() - t0:.0f}s)", flush=True)
+                if j == 0:
+                    uq_first[name] = uq
 
     # ---- evaluation (first-seed predictions for neural models)
     groups = te["meta"]["wmo"].to_numpy()
@@ -571,14 +607,49 @@ def run(args):
     pd.DataFrame({m: r["per_depth_sal_rmse"] for m, r in results.items()}, index=DEPTHS.astype(int)).to_csv(out / "per_depth_sal_rmse.csv", index_label="dbar")
     make_figures(out / "figures", tag.replace("_", " "), results, extras)
     (out / "RESULTS.md").write_text(write_report(to_jsonable(payload)), encoding="utf-8")
+    write_extended(out, tag, preds, ctx, clim_info, ext_seeds, cls_seeds, uq_first, args)
     print(f"Saved results to {out}")
     return out
+
+
+def write_extended(out, tag, preds, ctx, clim_info, ext_seeds, cls_seeds, uq_first, args):
+    """Metrics 1-7 and the classification view, as two separate records."""
+    det, cls = {}, {}
+    for m in MODEL_ORDER:
+        if m not in preds:
+            continue
+        pT, pS = preds[m]
+        r = mx.metrics_1_6(pT, pS, ctx, is_reference_clim=(m == "Climatology (local)"))
+        dd = r.pop("_derived_arrays")
+        det[m], cls[m] = r, mx.classification(pT, pS, ctx, dd)
+    strip = lambda rows: [{k: v for k, v in r.items() if k != "seed"} for r in rows]
+    common = {"tag": tag, "finished": time.strftime("%Y-%m-%d %H:%M:%S"), "n_test": int(len(ctx["tT"])),
+              "seeds": args.seeds, "first_seed": args.seeds[0]}
+    p17 = {**common, "mc_passes": args.mc_passes, "climatology_reference": clim_info,
+           "clim_cell_share": ctx["clim_cell_share"], "observed": ctx["observed"], "definitions": mx.DEFINITIONS,
+           "models": det, "uq": uq_first, "seed_stats": {m: mx.seed_summary(strip(r)) for m, r in ext_seeds.items() if r}}
+    pcl = {**common, "definitions": {k: mx.DEFINITIONS[k] for k in ("direction", "stability detection")},
+           "models": cls, "seed_stats": {m: mx.seed_summary(strip(r)) for m, r in cls_seeds.items() if r}}
+    p17, pcl = to_jsonable(p17), to_jsonable(pcl)
+    (out / "metrics_1_7.json").write_text(json.dumps(p17, indent=2))
+    (out / "classification_metrics.json").write_text(json.dumps(pcl, indent=2))
+    pd.DataFrame([{"model": m, **mx.flat_1_7(det[m], uq_first.get(m))} for m in det]).to_csv(out / "metrics_1_7.csv", index=False)
+    pd.DataFrame([{"model": m, **mx.flat_cls(cls[m])} for m in cls]).to_csv(out / "classification_metrics.csv", index=False)
+    pd.DataFrame([{"model": m, **r} for m, rows in ext_seeds.items() for r in rows]).to_csv(out / "metrics_1_7_seeds.csv", index=False)
+    pd.DataFrame([{"model": m, **r} for m, rows in cls_seeds.items() for r in rows]).to_csv(out / "classification_metrics_seeds.csv", index=False)
+    try:
+        mx.figures(out / "figures", tag, p17, MODEL_ORDER, SHORT, COLORS, REFERENCE)
+    except Exception as exc:  # never lose the numbers because of a plotting problem
+        print(f"  extended figures failed: {exc}")
+    (out / "METRICS_1_7.md").write_text(mx.report_1_7(p17, MODEL_ORDER, SHORT), encoding="utf-8")
+    (out / "CLASSIFICATION_METRICS.md").write_text(mx.report_cls(pcl, MODEL_ORDER), encoding="utf-8")
 
 
 # ------------------------------------------------------------------- report
 DESCRIPTIONS = {
     "Persistence": "Next profile equals the last observed profile (t-1)",
-    "Climatology": "Monthly mean profile of the training targets",
+    "Climatology (regional)": "Monthly mean profile of the training targets over the whole region",
+    "Climatology (local)": "Monthly mean profile of the training targets in the same lat/lon grid cell",
     "Ridge": "Linear regression on the 96 standardised inputs, L2 penalty chosen on validation",
     "LightGBM": "One gradient-boosted tree ensemble per output (32), early stopping on validation",
     "GRU": "2-layer unidirectional GRU, 128 units, dropout 0.2",
@@ -721,7 +792,51 @@ def write_combined(out_root: Path):
         L += ["", f"Observed test profiles: {p['extras']['observed_inversion_teos10_pct']:.2f}% inversions.", ""]
     path = out_root / "BENCHMARK_10_MODELS_RESULTS.md"
     path.write_text("\n".join(L), encoding="utf-8")
+    write_combined_extended(out_root)
     return path
+
+
+def write_combined_extended(out_root: Path):
+    f = mx._f
+    runs = sorted(out_root.glob("*/metrics_1_7.json"))
+    if runs:
+        L = ["# Metrics 1-7: combined summary", "",
+             "Headline number from each metric group, first seed. Full tables: `<run>/METRICS_1_7.md`.", ""]
+        for fp in runs:
+            p = json.loads(fp.read_text()); R, U = p["models"], p["uq"]
+            L += [f"## {p['tag']}", "", f"Test windows {p['n_test']:,}; climatology reference "
+                  f"{p['climatology_reference']['cell_deg']:g}° cells by month.", "",
+                  "| Model | 1. RMSE T | 1. Bias T | 1. 95th pct abs error T | 2. ACC T | 3. Skill vs persistence T | 3. Skill vs climatology T | "
+                  "4. Thermocline RMSE T | 5. MLD RMSE (m) | 5. D20 RMSE (m) | 5. OHC RMSE (GJ m⁻²) | 6. Inversions any (%) | "
+                  "6. Inversions > 0.03 (%) | 7. CRPS T point | 7. CRPS T MC cal | 7. Coverage 95 T cal |",
+                  "|---|" + "---|" * 15]
+            for m in [m for m in MODEL_ORDER if m in R]:
+                r, u = R[m], (U.get(m) or {}).get("T")
+                L.append(f"| {m} | {f(r['T']['rmse'])} | {f(r['T']['bias'], sign=True)} | {f(r['T']['p95_abs_error'], 3)} | "
+                         f"{f(r['T']['acc'], 3)} | {f(r['T']['skill_vs_persistence'], pct=True, sign=True)} | "
+                         f"{f(r['T']['skill_vs_climatology'], pct=True, sign=True)} | {f(r['T']['thermocline_rmse'])} | "
+                         f"{f(r['derived']['mld_m']['rmse'], 1)} | {f(r['derived']['d20_m']['rmse'], 1)} | "
+                         f"{f(r['derived']['ohc_0_700_GJ_m2']['rmse'], 3)} | {r['physical']['rate_pct']['any']:.2f} | "
+                         f"{r['physical']['rate_pct']['0.03']:.2f} | {f(r['crps_point']['T'])} | "
+                         f"{f(u['crps_cal']) if u else '-'} | {f(u['coverage95_cal'], 3) if u else '-'} |")
+            L.append("")
+        (out_root / "METRICS_1_7_COMBINED.md").write_text("\n".join(L), encoding="utf-8")
+    runs = sorted(out_root.glob("*/classification_metrics.json"))
+    if runs:
+        L = ["# Classification metrics: combined summary", "",
+             "First seed. Full tables: `<run>/CLASSIFICATION_METRICS.md`.", ""]
+        for fp in runs:
+            p = json.loads(fp.read_text()); C = p["models"]
+            L += [f"## {p['tag']}", "",
+                  "| Model | T direction accuracy | T direction macro-F1 | S direction accuracy | S direction macro-F1 | "
+                  "Stability > 0.03: precision | recall | F1 |", "|---|---|---|---|---|---|---|---|"]
+            for m in [m for m in MODEL_ORDER if m in C]:
+                dT, dS, st = C[m]["direction"]["T"], C[m]["direction"]["S"], C[m]["stability"]["0.03"]
+                g = lambda d, k: f(d[k], 3) if d else "-"
+                L.append(f"| {m} | {g(dT, 'accuracy')} | {g(dT, 'macro_f1')} | {g(dS, 'accuracy')} | {g(dS, 'macro_f1')} | "
+                         f"{f(st['precision'], 3)} | {f(st['recall'], 3)} | {f(st['f1'], 3)} |")
+            L.append("")
+        (out_root / "CLASSIFICATION_METRICS_COMBINED.md").write_text("\n".join(L), encoding="utf-8")
 
 
 def main():
@@ -732,7 +847,9 @@ def main():
     ap.add_argument("--allow-cpu", action="store_true",
                     help="run even when no CUDA GPU is visible (slow; meant for smoke tests)")
     ap.add_argument("--quick", action="store_true",
-                    help="smoke test: 1 seed, 2 epochs, 50 trees, 50 bootstrap resamples")
+                    help="smoke test: 1 seed, 2 epochs, 50 trees, 50 bootstrap resamples, 5 MC passes")
+    ap.add_argument("--mc-passes", type=int, default=50,
+                    help="MC-dropout passes for the uncertainty metrics (0 = skip)")
     ap.add_argument("--csv", type=Path, default=BACKEND / "data" / "processed" / "argo_floats_canonical.csv")
     ap.add_argument("--proc-dir", type=Path,
                     default=Path(os.environ.get("FC_DATA_DIR", BACKEND / "experiments" / "arabian_sea_2000_2026" / "data")) / "processed")
@@ -752,6 +869,7 @@ def main():
         args.models = ["Persistence"] + args.models
     if args.quick:
         args.seeds, args.epochs, args.lgb_estimators, args.bootstrap = args.seeds[:1], 2, 50, 50
+        args.mc_passes = min(args.mc_passes, 5)
         args.out = args.out / "_quick"
     if not torch.cuda.is_available() and not args.allow_cpu:
         sys.exit("No CUDA GPU is visible to PyTorch, so nothing was run.\n"

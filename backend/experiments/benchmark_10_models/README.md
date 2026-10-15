@@ -69,15 +69,27 @@ python run_benchmark.py --dataset canonical
 
 ## 4. Results
 
+Three separate records per split, plus a combined version of each across splits.
+
 | File | Contents |
 |---|---|
-| `outputs\BENCHMARK_10_MODELS_RESULTS.md` | Combined ranking across all completed runs |
-| `outputs\arabian2000_chronological\RESULTS.md` | Full record: data, models, main table with 95% CIs, seed stability, paired comparison vs FloatChat, per-depth errors, cost, interpretability signals |
-| `outputs\arabian2000_unseen_floats\RESULTS.md` | Same, for the unseen-float split |
-| `outputs\<run>\metrics.json`, `metrics.csv`, `per_depth_*.csv` | Raw numbers |
-| `outputs\<run>\figures\*.png / *.pdf` | Paper figures (300 dpi PNG and vector PDF) |
+| `outputs\<run>\RESULTS.md` | Main record: data, models, main table with 95% CIs, seed stability, paired comparison vs FloatChat, per-depth errors, cost, interpretability signals |
+| `outputs\<run>\METRICS_1_7.md` | 1 error size (RMSE, MAE, bias, max, 95th/99th pct), 2 agreement (R², ACC), 3 skill (vs persistence, vs climatology), 4 where errors occur (layers, seasons, depth), 5 derived ocean quantities (MLD, D20, max-gradient depth, heat content 0-700), 6 physical consistency (inversion rate and strength), 7 uncertainty (CRPS, MC-dropout coverage, calibration) |
+| `outputs\<run>\CLASSIFICATION_METRICS.md` | Direction of change and stability detection: accuracy, precision, recall, F1 |
+| `outputs\BENCHMARK_10_MODELS_RESULTS.md`, `METRICS_1_7_COMBINED.md`, `CLASSIFICATION_METRICS_COMBINED.md` | Combined across all completed runs |
+| `outputs\<run>\*.json`, `*.csv` | Raw numbers; `*_seeds.csv` has one row per model and seed |
+| `outputs\<run>\figures\*.png / *.pdf` | Paper figures (300 dpi PNG and vector PDF); `fig_bench_*` main, `fig_m17_*` metrics 1-7 |
+
+`<run>` is `arabian2000_chronological` or `arabian2000_unseen_floats`.
 
 Add the `.md` files and figures to the project so the paper can be updated from them.
+
+## Notes on the extended metrics
+
+- Two climatology baselines: regional monthly mean, and location-by-month (grid-cell size 1, 2 or 3 degrees chosen on validation). The local one is the reference for ACC and skill vs climatology.
+- Mixed layer depth is computed on the 16-level grid, so its precision is limited by the level spacing near the surface.
+- MC-dropout uncertainty (50 passes, `--mc-passes`) applies to the neural models with dropout. DLinear, Ridge, LightGBM, persistence and climatology give single-valued forecasts; their CRPS equals their MAE.
+- All extended metrics are computed for every seed; the tables show the first seed (same predictions as the main table) and a mean ± std section.
 
 ## Fairness rules built into the script
 
