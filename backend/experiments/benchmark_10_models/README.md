@@ -1,6 +1,6 @@
 # FloatChat 10-model benchmark - how to run (GPU)
 
-Trains and evaluates 10 comparison forecasters plus the two FloatChat Bi-LSTM rows on the
+Trains and evaluates 10 comparison forecasters plus FloatChat PI-BiLSTM (the proposed physics-informed model) and its no-physics ablation on the
 405-float Arabian Sea 2000-2026 dataset, on both splits (chronological and unseen floats).
 
 | # | Model | Runs on |
@@ -15,7 +15,7 @@ Trains and evaluates 10 comparison forecasters plus the two FloatChat Bi-LSTM ro
 | 8 | DLinear | GPU |
 | 9 | N-HiTS | GPU |
 | 10 | TFT | GPU |
-| ref | Bi-LSTM (MSE only), FloatChat Bi-LSTM | GPU |
+| ref | FloatChat PI-BiLSTM (proposed), Bi-LSTM (no physics loss) | GPU |
 
 ## Folder layout
 
@@ -96,7 +96,7 @@ Add the `.md` files and figures to the project so the paper can be updated from 
 - Same data, same standardisation (fitted on training targets only), same test windows for every model.
 - All neural models: AdamW (lr 1e-3, wd 1e-4), cosine schedule, gradient clipping 5, batch 64,
   up to 60 epochs, early stopping (patience 10) on validation temperature RMSE.
-- Same data loss for all (MSE_T + 2.5 MSE_S); only FloatChat Bi-LSTM adds the stability (10.0)
+- Same data loss for all (MSE_T + 2.5 MSE_S); only FloatChat PI-BiLSTM adds the stability (10.0)
   and thermocline (1.5) penalties.
 - Ridge alpha and LightGBM tree count are chosen on validation only.
 - Confidence intervals use a float-level block bootstrap with identical resamples for every model,

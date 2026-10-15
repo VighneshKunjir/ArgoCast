@@ -581,7 +581,7 @@ def report_cls(p, order):
         L.append("")
     L += ["## B. Stability detection", "",
           "Does the forecast correctly say whether the real profile contains a density inversion? Positive class = unstable "
-          "profile. A model that almost never forecasts instability (FloatChat, by design) gets high precision or "
+          "profile. A model that almost never forecasts instability (FloatChat PI-BiLSTM, by design) gets high precision or "
           "undefined precision and low recall: most observed inversions are sensor noise or short-lived features that a "
           "10-day forecast is not meant to reproduce. Read this table together with the inversion rates in METRICS_1_7.md.", ""]
     for k, label in (("any", "any inversion"), ("0.01", "inversion larger than 0.01 kg m⁻³"),
@@ -613,7 +613,7 @@ def report_cls(p, order):
 
 
 # ---------------------------------------------------------------- figures
-def figures(fig_dir, tag, p, order, short, colors, reference):
+def figures(fig_dir, tag, p, order, short, colors, reference, note_fn=None):
     import matplotlib
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
@@ -622,6 +622,8 @@ def figures(fig_dir, tag, p, order, short, colors, reference):
                          "axes.grid": True, "grid.alpha": 0.25, "legend.frameon": False})
 
     def save(fig, name):
+        if note_fn:
+            note_fn(fig)
         fig.savefig(fig_dir / f"{name}.png"); fig.savefig(fig_dir / f"{name}.pdf"); plt.close(fig)
 
     R = p["models"]

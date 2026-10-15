@@ -40,7 +40,7 @@ class _DualHead(nn.Module):
 class GRUForecaster(nn.Module):
     """2-layer unidirectional GRU, 128 units, dropout 0.2, dual heads.
 
-    Direct ablation of the FloatChat Bi-LSTM: same depth, width, dropout and
+    Direct ablation of the FloatChat PI-BiLSTM: same depth, width, dropout and
     heads, but GRU gating and a single (forward) direction.
     """
 
@@ -306,8 +306,8 @@ def build(name: str) -> nn.Module:
         "DLinear": DLinear,
         "N-HiTS": NHiTS,
         "TFT": TemporalFusionTransformer,
-        "Bi-LSTM (MSE only)": PhysicsInformedBiLSTM,
-        "FloatChat Bi-LSTM": PhysicsInformedBiLSTM,
+        "Bi-LSTM (no physics loss)": PhysicsInformedBiLSTM,
+        "FloatChat PI-BiLSTM": PhysicsInformedBiLSTM,
     }
     return table[name]()
 

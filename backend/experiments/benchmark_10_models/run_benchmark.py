@@ -13,12 +13,13 @@ Models (all forecast the full next-cycle 16-level T and S profile from 3 past cy
   8  DLinear                   trend / remainder decomposition + per-channel linear layers
   9  N-HiTS                    multi-rate pooled MLP stacks with doubly residual stacking
   10 TFT                       compact Temporal Fusion Transformer
-  Reference rows: Bi-LSTM (MSE only) and FloatChat Bi-LSTM (physics-constrained loss)
+  Reference rows: FloatChat PI-BiLSTM (physics-informed loss) and Bi-LSTM (no physics loss), the
+  same network trained with MSE only (ablation)
 
 All neural models use the same data loss as FloatChat without the physics terms
 (MSE_T + 2.5 MSE_S), the same optimiser (AdamW, lr 1e-3, wd 1e-4, cosine schedule),
 gradient clipping, batch size and early stopping on validation temperature RMSE.
-Only FloatChat Bi-LSTM adds the stability and thermocline penalties.
+Only FloatChat PI-BiLSTM adds the stability and thermocline penalties.
 
 Datasets
   --dataset canonical     backend/data/processed/argo_floats_canonical.csv, the 109-float
@@ -81,18 +82,30 @@ DEEP_IDX = [10, 11, 12, 13, 14, 15]
 ARCTIC_WMOS = {6903058, 6903059, 6903060, 6903062, 6903063}
 
 MODEL_ORDER = ["Persistence", "Climatology (regional)", "Climatology (local)", "Ridge", "LightGBM", "GRU", "Seq2Seq LSTM + attention",
-               "TCN", "DLinear", "N-HiTS", "TFT", "Bi-LSTM (MSE only)", "FloatChat Bi-LSTM"]
+               "TCN", "DLinear", "N-HiTS", "TFT", "Bi-LSTM (no physics loss)", "FloatChat PI-BiLSTM"]
 NEURAL = ["GRU", "Seq2Seq LSTM + attention", "TCN", "DLinear", "N-HiTS", "TFT",
-          "Bi-LSTM (MSE only)", "FloatChat Bi-LSTM"]
-REFERENCE = "FloatChat Bi-LSTM"
+          "Bi-LSTM (no physics loss)", "FloatChat PI-BiLSTM"]
+REFERENCE = "FloatChat PI-BiLSTM"
 COLORS = {
     "Persistence": "#999999", "Climatology (regional)": "#CC79A7", "Climatology (local)": "#882255", "Ridge": "#E69F00", "LightGBM": "#56B4E9",
     "GRU": "#8C6D31", "Seq2Seq LSTM + attention": "#D55E00", "TCN": "#7F3C8D", "DLinear": "#F0E442",
-    "N-HiTS": "#11A579", "TFT": "#E73F74", "Bi-LSTM (MSE only)": "#009E73", "FloatChat Bi-LSTM": "#0072B2",
+    "N-HiTS": "#11A579", "TFT": "#E73F74", "Bi-LSTM (no physics loss)": "#009E73", "FloatChat PI-BiLSTM": "#0072B2",
 }
 SHORT = {"Climatology (regional)": "Clim (regional)", "Climatology (local)": "Clim (local)",
-         "Seq2Seq LSTM + attention": "Seq2Seq+Attn", "Bi-LSTM (MSE only)": "Bi-LSTM (MSE)",
-         "FloatChat Bi-LSTM": "FloatChat"}
+         "Seq2Seq LSTM + attention": "Seq2Seq+Attn", "Bi-LSTM (no physics loss)": "Bi-LSTM (no physics)",
+         "FloatChat PI-BiLSTM": "FloatChat PI-BiLSTM"}
+# Printed under every figure so that each figure is self-explanatory.
+FIG_NOTE = ("FloatChat PI-BiLSTM (proposed): physics-informed 2-layer bidirectional LSTM (128 units per direction, "
+            "dropout 0.2, separate temperature and salinity output heads), trained with MSE plus a TEOS-10 "
+            "density-stability penalty (weight 10) and a thermocline-gradient penalty (weight 1.5). "
+            "Bi-LSTM (no physics): the identical network trained with MSE only. All models forecast the next "
+            "16-level T/S profile from the previous three profiles.")
+
+
+def add_note(fig, note=FIG_NOTE):
+    import textwrap
+    width = max(60, int(fig.get_figwidth() * 21))
+    fig.text(0.01, -0.01, textwrap.fill(note, width), fontsize=6, ha="left", va="top", color="#333333")
 
 
 # ------------------------------------------------------------------ helpers
@@ -327,6 +340,7 @@ def make_figures(fig_dir, tag, results, extras):
                          "axes.grid": True, "grid.alpha": 0.25, "legend.frameon": False})
 
     def save(fig, name):
+        add_note(fig)
         fig.savefig(fig_dir / f"{name}.png"); fig.savefig(fig_dir / f"{name}.pdf"); plt.close(fig)
 
     models = [m for m in MODEL_ORDER if m in results]
@@ -380,8 +394,14 @@ def make_figures(fig_dir, tag, results, extras):
     fig, ax = plt.subplots(figsize=(5.2, 3.6))
     for m in nm:
         ax.scatter(results[m]["n_params"], results[m]["temp_rmse"], s=40, color=COLORS[m], edgecolor="black", lw=0.4, zorder=3)
+        # FloatChat and its no-physics ablation share a parameter count: label one above, one below
+        below = m == "Bi-LSTM (no physics loss)" and REFERENCE in results and \
+            results[m]["temp_rmse"] <= results[REFERENCE]["temp_rmse"]
+        above_ref = m == REFERENCE and "Bi-LSTM (no physics loss)" in results and \
+            results[m]["temp_rmse"] < results["Bi-LSTM (no physics loss)"]["temp_rmse"]
+        dy = -9 if (below or above_ref) else 3
         ax.annotate(SHORT.get(m, m), (results[m]["n_params"], results[m]["temp_rmse"]), fontsize=6,
-                    xytext=(4, 3), textcoords="offset points")
+                    xytext=(5, dy), textcoords="offset points")
     ax.set_xscale("log"); ax.set_xlabel("Trainable parameters (log scale)"); ax.set_ylabel("Test temperature RMSE (°C)")
     ax.set_title("Model size vs accuracy", fontsize=9)
     save(fig, "fig_bench_params_vs_rmse")
@@ -638,7 +658,7 @@ def write_extended(out, tag, preds, ctx, clim_info, ext_seeds, cls_seeds, uq_fir
     pd.DataFrame([{"model": m, **r} for m, rows in ext_seeds.items() for r in rows]).to_csv(out / "metrics_1_7_seeds.csv", index=False)
     pd.DataFrame([{"model": m, **r} for m, rows in cls_seeds.items() for r in rows]).to_csv(out / "classification_metrics_seeds.csv", index=False)
     try:
-        mx.figures(out / "figures", tag, p17, MODEL_ORDER, SHORT, COLORS, REFERENCE)
+        mx.figures(out / "figures", tag, p17, MODEL_ORDER, SHORT, COLORS, REFERENCE, note_fn=add_note)
     except Exception as exc:  # never lose the numbers because of a plotting problem
         print(f"  extended figures failed: {exc}")
     (out / "METRICS_1_7.md").write_text(mx.report_1_7(p17, MODEL_ORDER, SHORT), encoding="utf-8")
@@ -658,8 +678,10 @@ DESCRIPTIONS = {
     "DLinear": "Moving-average trend/remainder split, one linear map per channel (no cross-depth mixing)",
     "N-HiTS": "Three MLP stacks (512 units) with multi-rate pooling and doubly residual stacking",
     "TFT": "Compact Temporal Fusion Transformer: variable selection, LSTM encoder, interpretable attention",
-    "Bi-LSTM (MSE only)": "FloatChat architecture trained without the physics terms (ablation)",
-    "FloatChat Bi-LSTM": "FloatChat architecture with the TEOS-10 stability and thermocline penalties",
+    "Bi-LSTM (no physics loss)": "Identical network to FloatChat PI-BiLSTM, trained with MSE only (ablation of the physics terms)",
+    "FloatChat PI-BiLSTM": "Proposed model. Physics-informed 2-layer bidirectional LSTM (128 units per direction, dropout 0.2, "
+                           "separate T and S heads); loss = MSE(T) + 2.5 MSE(S) + 10 x TEOS-10 stability penalty + "
+                           "1.5 x thermocline-gradient penalty",
 }
 
 
@@ -713,10 +735,10 @@ def write_report(p):
         L.append("")
 
     if REFERENCE in R:
-        L += ["## Paired comparison against FloatChat Bi-LSTM", "",
-              "Difference = model RMSE - FloatChat RMSE (negative means the model is more accurate). "
+        L += ["## Paired comparison against FloatChat PI-BiLSTM", "",
+              "Difference = model RMSE - FloatChat PI-BiLSTM RMSE (negative means the model is more accurate). "
               "P(beats) = share of bootstrap resamples in which the model has lower RMSE.", "",
-              "| Model | ΔTemp RMSE [95% CI] | P(beats FloatChat, T) | ΔSal RMSE [95% CI] | P(beats FloatChat, S) | Inversions (%) vs FloatChat |",
+              "| Model | ΔTemp RMSE [95% CI] | P(beats FloatChat PI-BiLSTM, T) | ΔSal RMSE [95% CI] | P(beats FloatChat PI-BiLSTM, S) | Inversions (%) vs FloatChat PI-BiLSTM |",
               "|---|---|---|---|---|---|"]
         fc_inv = R[REFERENCE]["inversion_teos10_pct"]
         for m in [m for m in MODEL_ORDER if m in R and m != REFERENCE]:
