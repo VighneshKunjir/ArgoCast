@@ -5,7 +5,6 @@
 [![Release](https://img.shields.io/github/v/release/VighneshKunjir/ArgoCast?label=release)](https://github.com/VighneshKunjir/ArgoCast/releases)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Stars](https://img.shields.io/github/stars/VighneshKunjir/ArgoCast?style=flat)](https://github.com/VighneshKunjir/ArgoCast/stargazers)
-[![Last commit](https://img.shields.io/github/last-commit/VighneshKunjir/ArgoCast/gai-build)](https://github.com/VighneshKunjir/ArgoCast/commits/gai-build)
 
 ![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python&logoColor=white)
 ![PyTorch](https://img.shields.io/badge/PyTorch-2.2%2B-EE4C2C?logo=pytorch&logoColor=white)
