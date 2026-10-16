@@ -6,7 +6,6 @@
 [![Code license: MIT](https://img.shields.io/badge/Code%20license-MIT-yellow.svg)](LICENSE)
 [![Data license: CC BY 4.0](https://img.shields.io/badge/Data%20license-CC%20BY%204.0-lightgrey.svg)](https://creativecommons.org/licenses/by/4.0/)
 [![Stars](https://img.shields.io/github/stars/VighneshKunjir/ArgoCast?style=flat)](https://github.com/VighneshKunjir/ArgoCast/stargazers)
-[![Last commit](https://img.shields.io/github/last-commit/VighneshKunjir/ArgoCast/gai-build)](https://github.com/VighneshKunjir/ArgoCast/commits/gai-build)
 
 ![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python&logoColor=white)
 ![PyTorch](https://img.shields.io/badge/PyTorch-2.2%2B-EE4C2C?logo=pytorch&logoColor=white)
