@@ -1,0 +1,37 @@
+{
+  "title": "ArgoCast: physics-informed forecasting of Argo temperature and salinity profiles in the Arabian Sea",
+  "description": "<p>ArgoCast forecasts the next temperature and salinity profile of an Argo float in the Arabian Sea on 16 standard pressure levels (5 to 1000 dbar). The forecasting model is a two-layer bidirectional LSTM trained with a TEOS-10 static-stability penalty, with Monte Carlo dropout uncertainty bands, Integrated Gradients attributions and evidence links to similar observed Argo profiles.</p><p>The release contains the FastAPI backend and trained model artifacts, the React web interface, the data preparation pipeline and the thirteen-model benchmark and experiment scripts used in the accompanying manuscript submitted to Ocean Dynamics.</p>",
+  "upload_type": "software",
+  "version": "2.0.0",
+  "access_right": "open",
+  "license": "mit",
+  "language": "eng",
+  "creators": [
+    {
+      "name": "Kunjir, Vighnesh Walmik",
+      "affiliation": "Department of Computer Science and Engineering, MIT World Peace University (MIT-WPU), Pune, India"
+    },
+    {
+      "name": "Kinger, Shakti",
+      "affiliation": "Department of Computer Science and Engineering, MIT World Peace University (MIT-WPU), Pune, India"
+    }
+  ],
+  "keywords": [
+    "Argo",
+    "Arabian Sea",
+    "temperature and salinity profiles",
+    "ocean forecasting",
+    "physics-informed deep learning",
+    "static stability",
+    "TEOS-10",
+    "uncertainty quantification",
+    "explainable machine learning"
+  ],
+  "related_identifiers": [
+    {
+      "identifier": "https://doi.org/10.17882/42182",
+      "relation": "references",
+      "resource_type": "dataset"
+    }
+  ]
+}
