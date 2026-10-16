@@ -1,5 +1,19 @@
 # ArgoCast
 
+[![Code DOI](https://zenodo.org/badge/1379753522.svg)](https://doi.org/10.5281/zenodo.23422343)
+[![Data DOI](https://img.shields.io/badge/Data%20DOI-10.5281%2Fzenodo.23423759-blue)](https://doi.org/10.5281/zenodo.23423759)
+[![Release](https://img.shields.io/github/v/release/VighneshKunjir/ArgoCast?label=release)](https://github.com/VighneshKunjir/ArgoCast/releases)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![Stars](https://img.shields.io/github/stars/VighneshKunjir/ArgoCast?style=flat)](https://github.com/VighneshKunjir/ArgoCast/stargazers)
+[![Last commit](https://img.shields.io/github/last-commit/VighneshKunjir/ArgoCast/gai-build)](https://github.com/VighneshKunjir/ArgoCast/commits/gai-build)
+
+![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python&logoColor=white)
+![PyTorch](https://img.shields.io/badge/PyTorch-2.2%2B-EE4C2C?logo=pytorch&logoColor=white)
+![FastAPI](https://img.shields.io/badge/FastAPI-backend-009688?logo=fastapi&logoColor=white)
+![React](https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=black)
+![Node.js](https://img.shields.io/badge/Node.js-20%2B-339933?logo=node.js&logoColor=white)
+![TEOS-10](https://img.shields.io/badge/physics-TEOS--10%20%28gsw%29-0A6EBD)
+
 **Physics-informed, explainable forecasting of Argo ocean temperature and salinity profiles in the Arabian Sea.**
 
 ArgoCast forecasts the next temperature and salinity profile of an Argo float (16 levels, 5 to 1000 dbar, about 10 days ahead) from its three most recent profiles. Every forecast comes with:
