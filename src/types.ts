@@ -74,6 +74,10 @@ export interface PhysicalDiagnostics {
   surface_potential_density: number; // kg/m^3
   deep_potential_density: number; // kg/m^3
   stability_violation_count: number;
+  level_pairs_checked?: number;
+  max_density_drop?: number; // kg/m^3, largest decrease of sigma0 between adjacent levels
+  inversions_above_0_03?: number;
+  mld_resolved?: boolean;
   density_profile: {
     depth_dbar: number;
     sigma_theta: number; // kg/m^3
@@ -99,6 +103,13 @@ export interface XAIAttribution {
     attribution_percentage: number;
     scientific_driver: string;
   }[];
+  convergence_delta?: number;
+  target?: { variable: string; depth_dbar: number };
+  baseline?: string;
+  top_input?: { cycle_offset: number; cycle: number | null; variable: string; depth_dbar: number; share: number };
+  cross_variable_share?: number;
+  matrix_variable?: string;
+  matrix_convergence_delta?: number;
 }
 
 export interface ForecastResult {

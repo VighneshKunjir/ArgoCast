@@ -239,6 +239,7 @@ async def run_forecast(request: dict, background_tasks: BackgroundTasks):
                 "buoyancy_frequency_n2": float(phys["brunt_vaisala_N2"][k - 1]) if k > 0 else 0.0,
             })
         mld = phys["mld_dbar"]
+        drops = -np.diff(np.asarray(phys["potential_density"], dtype=float))  # >0 where density decreases downward
         physical_diagnostics = {
             "is_gravitationally_stable": bool(phys["is_gravitationally_stable"]),
             "min_density_gradient": float(np.min(phys["stability"])),
@@ -249,18 +250,17 @@ async def run_forecast(request: dict, background_tasks: BackgroundTasks):
             "surface_potential_density": round(float(phys["potential_density"][0]), 2),
             "deep_potential_density": round(float(phys["potential_density"][-1]), 2),
             "stability_violation_count": int(phys["stability_violations"]),
+            "level_pairs_checked": len(STANDARD_DEPTHS) - 1,
+            "max_density_drop": float(max(drops.max(), 0.0)),
+            "inversions_above_0_03": int((drops > 0.03).sum()),
+            "mld_resolved": bool(not np.isnan(mld)),
             "density_profile": density_profile,
         }
 
         # ---- Integrated Gradients attribution (temperature at 100 dbar)
-        xai_result = compute_xai_attribution(
-            model, input_tensor, target_variable="temp", target_depth_idx=4,
-            input_cycles=input_cycles, temp_profile=temp_pred, sal_profile=sal_pred,
-            mld_dbar=physical_diagnostics["mixed_layer_depth_m"],
-            thermocline_depth_dbar=physical_diagnostics["thermocline_depth_m"],
+        xai_dict = compute_xai_attribution(
+            model, input_tensor, target_variable="temp", target_depth_idx=4, input_cycles=input_cycles,
         )
-        xai_dict = {k: xai_result[k] for k in
-                    ("temporal_attribution", "depth_attribution_matrix", "key_depth_influences", "convergence_delta")}
 
         # ---- score this single forecast against the observed target profile
         therm = np.where((STANDARD_DEPTHS >= 50) & (STANDARD_DEPTHS <= 200))[0]
