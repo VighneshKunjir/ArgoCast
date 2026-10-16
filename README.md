@@ -2,7 +2,7 @@
 
 [![Code DOI](https://zenodo.org/badge/1379753522.svg)](https://doi.org/10.5281/zenodo.23422343)
 [![Data DOI](https://img.shields.io/badge/Data%20DOI-10.5281%2Fzenodo.23423759-blue)](https://doi.org/10.5281/zenodo.23423759)
-[![Release](https://img.shields.io/github/v/release/VighneshKunjir/ArgoCast?label=release)](https://github.com/VighneshKunjir/ArgoCast/releases)
+[![Release](https://img.shields.io/badge/release-v2.0.0-blue)](https://github.com/VighneshKunjir/ArgoCast/releases/tag/v2.0.0)
 [![Code license: MIT](https://img.shields.io/badge/Code%20license-MIT-yellow.svg)](LICENSE)
 [![Data license: CC BY 4.0](https://img.shields.io/badge/Data%20license-CC%20BY%204.0-lightgrey.svg)](https://creativecommons.org/licenses/by/4.0/)
 [![Stars](https://img.shields.io/github/stars/VighneshKunjir/ArgoCast?style=flat)](https://github.com/VighneshKunjir/ArgoCast/stargazers)
