@@ -193,4 +193,4 @@ Argo (2000). Argo float data and metadata from Global Data Assembly Centre (Argo
 
 ## Authors
 
-Vighnesh Walmik Kunjir and Prof. Shakti Kinger, Department of Computer Science and Engineering, MIT World Peace University, Pune, India.
+Vighnesh Walmik Kunjir, M.Tech Computer Science and Engineering (Data Science And Analytics) MIT World Peace University, Pune, India.
