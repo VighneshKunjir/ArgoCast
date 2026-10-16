@@ -1,6 +1,0 @@
-{
-  "name": "FloatChat",
-  "description": "Explainable, evidence-linked forecasting and conversational analysis for Argo ocean temperature and salinity profiles.",
-  "requestFramePermissions": [],
-  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
-}

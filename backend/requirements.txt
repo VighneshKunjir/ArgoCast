@@ -1,35 +1,21 @@
-# FloatChat Python Backend Dependencies
-# Core Framework
-fastapi>=0.110.0
-uvicorn[standard]>=0.28.0
-pydantic>=2.6.0
-pydantic-settings>=2.2.0
-
-# Database & ORM
+# FloatChat backend (API, model inference, database)
+fastapi>=0.110
+uvicorn[standard]>=0.28
+pydantic>=2.6
 sqlalchemy>=2.0.28
-alembic>=1.13.1
-python-dotenv>=1.0.0
-
-# Scientific & Oceanographic
+alembic>=1.13
+python-dotenv>=1.0
+numpy>=1.26,<2.0
+pandas>=2.2
+scikit-learn>=1.4
+joblib>=1.3
+torch>=2.2
+captum>=0.7
 gsw>=3.6.17
-netCDF4>=1.6.5
-xarray>=2024.2.0
-numpy>=1.26.4,<2.0.0
-scipy>=1.12.0
-pandas>=2.2.1
 
-# Machine Learning & Deep Learning
-torch>=2.2.1
-scikit-learn>=1.4.1
+# Optional: Gemini answers in the chat (offline templates are used without it)
+google-genai>=0.3
 
-# Explainability (XAI)
-captum>=0.7.0
-shap>=0.45.0
-
-# LLM Integration
-google-genai>=0.3.0
-
-# Testing
-pytest>=8.0.0
-pytest-asyncio>=0.23.0
-httpx>=0.26.0
+# Tests
+pytest>=8.0
+httpx>=0.26

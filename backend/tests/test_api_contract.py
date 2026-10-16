@@ -1,4 +1,4 @@
-"""API contract tests per .ai/testing.md section 4."""
+"""API contract tests for the FastAPI backend."""
 import pytest
 from fastapi.testclient import TestClient
 

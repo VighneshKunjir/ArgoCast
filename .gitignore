@@ -1,50 +1,34 @@
+# Dependencies and build output
 node_modules/
-build/
 dist/
+build/
 coverage/
-/backend/data/raw/
-/backend/data/floatchat.db
-/backend/data/*.db
-/backend/data/*.sqlite
-/backend/data/*.txt
-.DS_Store
-*.log
-.env*
-!.env.example
+venv/
+.venv/
 __pycache__/
 *.pyc
-arabian_sea_top60_floats.txt
+.pytest_cache/
+
+# Local configuration and logs
+.env
+.env.*
+!.env.example
+*.log
+.DS_Store
+
+# Database (rebuilt with: python backend/scripts/seed_database.py)
+backend/data/*.db
+backend/data/*.sqlite
+
+# Research pipeline: downloaded NetCDF, intermediate arrays and run outputs
+# (all rebuilt by backend/research/pipeline/run_all.py and backend/research/benchmark/run_benchmark.py)
+backend/research/pipeline/data/
+backend/research/pipeline/outputs/
+backend/research/pipeline/outputs_*/
+backend/research/benchmark/outputs/
+backend/research/benchmark/outputs_*/
+
+# Tool caches
 .playwright-mcp/
 .playwright-cli/
-*.png
-venv/
 graphify-out/
-debug_*.py
-*pdf
-backend/app/ml/artifacts/experiments/*.csv
-backend/app/ml/artifacts/experiments/smoke/*.csv
-backend/app/ml/artifacts/experiments/lam50/*csv
-backend/app/ml/artifacts/experiments/lam100/*csv
-backend/app/ml/artifacts/experiments/lam10_gpu/*csv
-
-# Extended Arabian Sea evaluation (2000-2026): large generated files.
-# Everything below can be rebuilt with run_all.py.
-backend/experiments/arabian_sea_2000_2026/data/raw/
-backend/experiments/arabian_sea_2000_2026/data/processed/*.npz
-backend/experiments/arabian_sea_2000_2026/data/processed/*.csv.gz
-backend/experiments/arabian_sea_2000_2026/data/*.txt.gz
-backend/experiments/arabian_sea_2000_2026/outputs/models/
-backend/experiments/arabian_sea_2000_2026/outputs/predictions/
-backend/experiments/arabian_sea_2000_2026/outputs/tables/*.npz
-
-# Keep the experiment figures used in the papers and slides
-# (overrides the global *.png and *pdf rules above).
-!backend/experiments/arabian_sea_2000_2026/outputs/figures/*.png
-!backend/experiments/arabian_sea_2000_2026/outputs/figures/*.pdf
-
-# 10-model benchmark: large generated files (rebuild with run_benchmark.py)
-backend/experiments/benchmark_10_models/outputs/*/models/
-backend/experiments/benchmark_10_models/outputs/*/predictions/
-backend/experiments/benchmark_10_models/outputs/_quick/
-!backend/experiments/benchmark_10_models/outputs/*/figures/*.png
-!backend/experiments/benchmark_10_models/outputs/*/figures/*.pdf

@@ -52,7 +52,7 @@ def test_mld_detection():
 
 
 def test_acceptance_profile_is_stable():
-    # TASK-201 acceptance profile
+    # Reference profile that must pass the stability check
     result = validate_profile_physics(
         np.linspace(28, 7, 16), np.linspace(36.5, 35.2, 16)
     )

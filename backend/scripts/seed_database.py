@@ -3,8 +3,9 @@
 
 Source: backend/data/processed/argo_arabian_2000_2026.csv.gz
   one row per quality-controlled profile (321 floats, 36,164 profiles), already
-  interpolated to the 16 standard levels (5-1000 dbar). It is the same table the
-  forecasting model was trained and evaluated on.
+  interpolated to the 16 standard levels (5-1000 dbar). It is the table written by
+  research/pipeline/s02_build_dataset.py (plus the GDAC data centre of each float),
+  the same data the forecasting model was trained and evaluated on.
 
 The script is idempotent: floats and profiles already in the database are skipped.
 Use --reset to drop and rebuild the Argo tables (forecast logs are kept).
@@ -62,6 +63,14 @@ def main():
     t0 = time.time()
     df = pd.read_csv(args.csv)
     df["date"] = pd.to_datetime(df["date"])
+    if "dac" not in df.columns:
+        # Raw pipeline output (research/pipeline/s02_build_dataset.py) has no DAC column;
+        # take it from the download manifest when available.
+        manifest = next((p for p in (args.csv.parent / "float_manifest.csv",
+                                     args.csv.parent.parent / "float_manifest.csv") if p.exists()), None)
+        dac = pd.read_csv(manifest, usecols=["wmo", "dac"]) if manifest else pd.DataFrame(columns=["wmo", "dac"])
+        df = df.merge(dac, on="wmo", how="left")
+        df["dac"] = df["dac"].fillna("unknown")
     if args.floats:
         keep = df["wmo"].value_counts().head(args.floats).index
         df = df[df["wmo"].isin(keep)]

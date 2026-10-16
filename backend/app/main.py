@@ -21,7 +21,7 @@ from app.api.forecast import load_model_and_preprocessor
 def create_app() -> FastAPI:
     """Create and configure the FastAPI application."""
     app = FastAPI(
-        title="FloatChat X-RAG Forecasting Engine",
+        title="FloatChat Forecasting API",
         version="2.0.0",
         description="Explainable Evidence-Linked Argo Ocean Profile Forecasting & Physics Validation Engine",
     )
@@ -86,7 +86,7 @@ def create_app() -> FastAPI:
     async def root():
         """Root endpoint."""
         return {
-            "message": "FloatChat X-RAG Forecasting Engine",
+            "message": "FloatChat Forecasting API",
             "version": "2.0.0",
             "docs": "/docs",
         }

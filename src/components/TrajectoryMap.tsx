@@ -30,14 +30,19 @@ interface TrajectoryMapProps {
     baseLon: number;
     cycles?: number[];
     defaultCycle?: number;
+    firstDate?: string;
+    lastDate?: string;
   }>;
   onSelectFloat: (wmoId: string) => void;
+  /** Real recorded positions of the selected float around the forecast, oldest first. */
+  track?: Array<{ cycle: number; lat: number; lon: number; date?: string }>;
 }
 
 export const TrajectoryMap: React.FC<TrajectoryMapProps> = ({
   forecast,
   allFloats,
-  onSelectFloat
+  onSelectFloat,
+  track = []
 }) => {
   // Map View Mode: Bathymetry, SST (Thermal), SSS (Haline)
   const [mapLayer, setMapLayer] = useState<'bathymetry' | 'sst' | 'salinity'>('bathymetry');
@@ -54,7 +59,7 @@ export const TrajectoryMap: React.FC<TrajectoryMapProps> = ({
 
   // Playback animation state for drift trajectory
   const [isPlaying, setIsPlaying] = useState(false);
-  const [playbackCycleIndex, setPlaybackCycleIndex] = useState(4); // 0 to 4 (t-4 to t)
+  const [playbackCycleIndex, setPlaybackCycleIndex] = useState(0);
 
   // Map coordinate bounds: 6°N to 26°N, 53°E to 79°E
   const minLat = 6.0;
@@ -73,14 +78,22 @@ export const TrajectoryMap: React.FC<TrajectoryMapProps> = ({
   // Generate historical drift track for current target float
   const targetLat = forecast.latitude;
   const targetLon = forecast.longitude;
-  const driftTrack = [
-    { cycle: forecast.target_cycle - 4, lat: targetLat - 0.88, lon: targetLon - 1.15, label: `Cycle ${forecast.target_cycle - 4} (t-4)` },
-    { cycle: forecast.target_cycle - 3, lat: targetLat - 0.65, lon: targetLon - 0.82, label: `Cycle ${forecast.target_cycle - 3} (t-3)` },
-    { cycle: forecast.target_cycle - 2, lat: targetLat - 0.44, lon: targetLon - 0.52, label: `Cycle ${forecast.target_cycle - 2} (t-2)` },
-    { cycle: forecast.target_cycle - 1, lat: targetLat - 0.21, lon: targetLon - 0.24, label: `Cycle ${forecast.target_cycle - 1} (t-1)` },
-    { cycle: forecast.target_cycle, lat: targetLat, lon: targetLon, label: `Cycle ${forecast.target_cycle} (Current)` },
-    { cycle: forecast.predicted_cycle, lat: targetLat + 0.22, lon: targetLon + 0.26, label: `Cycle ${forecast.predicted_cycle} (Projected)`, isForecast: true }
-  ];
+  // Recorded positions (from the profile archive). The forecast target is shown at its
+  // observed position when it exists; position itself is not forecast by the model.
+  const driftTrack: { cycle: number; lat: number; lon: number; label: string; isForecast?: boolean }[] =
+    track.length > 0
+      ? track.map((p) => {
+          const isTarget = p.cycle === forecast.predicted_cycle;
+          const isBase = p.cycle === forecast.target_cycle;
+          return {
+            cycle: p.cycle,
+            lat: p.lat,
+            lon: p.lon,
+            label: `Cycle ${p.cycle}${p.date ? ` (${p.date})` : ''}${isTarget ? ' - forecast target' : isBase ? ' - base cycle' : ''}`,
+            isForecast: isTarget,
+          };
+        })
+      : [{ cycle: forecast.target_cycle, lat: targetLat, lon: targetLon, label: `Cycle ${forecast.target_cycle} - base cycle` }];
 
   // Animation timer
   useEffect(() => {
@@ -102,6 +115,26 @@ export const TrajectoryMap: React.FC<TrajectoryMapProps> = ({
   };
 
   const isCurrentTarget = activeInspectorFloat.wmo_id === forecast.target_float_id;
+  const inspectorRecord = allFloats.find((f) => f.wmo_id === activeInspectorFloat.wmo_id);
+
+  // Drift between the last two recorded positions of the target float (real track only)
+  const drift = (() => {
+    const pts = track.filter((p) => p.cycle <= forecast.target_cycle);
+    if (pts.length < 2) return null;
+    const a = pts[pts.length - 2];
+    const b = pts[pts.length - 1];
+    if (!a.date || !b.date) return null;
+    const days = (new Date(b.date).getTime() - new Date(a.date).getTime()) / 86400000;
+    if (days <= 0) return null;
+    const R = 6371000;
+    const dLat = ((b.lat - a.lat) * Math.PI) / 180;
+    const dLon = ((b.lon - a.lon) * Math.PI) / 180 * Math.cos((((a.lat + b.lat) / 2) * Math.PI) / 180);
+    const metres = R * Math.sqrt(dLat * dLat + dLon * dLon);
+    const bearing = (Math.atan2(dLon, dLat) * 180) / Math.PI;
+    const dirs = ['north', 'north-east', 'east', 'south-east', 'south', 'south-west', 'west', 'north-west'];
+    const dir = dirs[Math.round(((bearing + 360) % 360) / 45) % 8];
+    return { cms: (metres / (days * 86400)) * 100, dir, days };
+  })();
 
   // Compute depth estimate from coordinates
   const getEstimatedDepth = (lat: number, lon: number): { depth: number; basin: string } => {
@@ -776,7 +809,7 @@ export const TrajectoryMap: React.FC<TrajectoryMapProps> = ({
                     <text
                       x={fx + 7}
                       y={fy + 3}
-                      className="text-[10px] fill-slate-400 group-hover:fill-cyan-300 font-mono transition-colors"
+                      className={`text-[10px] font-mono transition-opacity ${isSelected ? 'fill-cyan-300 opacity-100' : 'fill-cyan-300 opacity-0 group-hover:opacity-100'}`}
                     >
                       WMO {f.wmo_id}
                     </text>
@@ -885,7 +918,7 @@ export const TrajectoryMap: React.FC<TrajectoryMapProps> = ({
 
             {/* Trajectory Playback Controls */}
             <div className="flex items-center gap-2">
-              <span className="text-[11px] text-slate-400">Drift Simulation:</span>
+              <span className="text-[11px] text-slate-400">Track playback:</span>
               <button
                 onClick={() => setIsPlaying(!isPlaying)}
                 className="p-1 px-2 rounded bg-slate-800 hover:bg-slate-700 text-white font-semibold flex items-center gap-1 text-[11px]"
@@ -934,30 +967,31 @@ export const TrajectoryMap: React.FC<TrajectoryMapProps> = ({
 
             <div className="space-y-2 text-xs">
               <div className="flex justify-between py-1 border-b border-slate-50">
-                <span className="text-slate-500">Platform Type:</span>
-                <span className="font-semibold text-slate-800 font-mono">Webb Apex / APF-11</span>
+                <span className="text-slate-500">Record:</span>
+                <span className="font-semibold text-slate-800 font-mono">
+                  {inspectorRecord?.firstDate && inspectorRecord?.lastDate
+                    ? `${inspectorRecord.firstDate.slice(0, 7)} to ${inspectorRecord.lastDate.slice(0, 7)}`
+                    : '--'}
+                  {inspectorRecord?.cycles ? ` · ${inspectorRecord.cycles.length} profiles` : ''}
+                </span>
               </div>
               <div className="flex justify-between py-1 border-b border-slate-50">
                 <span className="text-slate-500">Coordinates:</span>
                 <span className="font-semibold font-mono text-slate-800">
-                  {activeInspectorFloat.baseLat}°N, {activeInspectorFloat.baseLon}°E
+                  {activeInspectorFloat.baseLat.toFixed(3)}°N, {activeInspectorFloat.baseLon.toFixed(3)}°E
                 </span>
               </div>
               <div className="flex justify-between py-1 border-b border-slate-50">
-                <span className="text-slate-500">Sea Basin:</span>
+                <span className="text-slate-500">Region (approx.):</span>
                 <span className="font-semibold text-slate-800">
                   {getEstimatedDepth(activeInspectorFloat.baseLat, activeInspectorFloat.baseLon).basin}
                 </span>
               </div>
               <div className="flex justify-between py-1 border-b border-slate-50">
-                <span className="text-slate-500">Estimated Depth:</span>
-                <span className="font-semibold text-cyan-700 font-mono">
-                  ~{getEstimatedDepth(activeInspectorFloat.baseLat, activeInspectorFloat.baseLon).depth} meters
+                <span className="text-slate-500">Recent drift:</span>
+                <span className="font-semibold text-slate-800 font-mono">
+                  {isCurrentTarget && drift ? `${drift.cms.toFixed(1)} cm/s toward ${drift.dir} (${drift.days.toFixed(0)} d)` : '--'}
                 </span>
-              </div>
-              <div className="flex justify-between py-1 border-b border-slate-50">
-                <span className="text-slate-500">Drift Velocity:</span>
-                <span className="font-semibold text-slate-800 font-mono">4.2 cm/s (Eastward)</span>
               </div>
               <div className="flex justify-between py-1 border-b border-slate-50">
                 <span className="text-slate-500">Profile Reach:</span>
@@ -997,7 +1031,7 @@ export const TrajectoryMap: React.FC<TrajectoryMapProps> = ({
               </div>
               <div className="flex items-center gap-2">
                 <span className="w-4 h-0.5 bg-cyan-400 border-dashed shrink-0"></span>
-                <span className="text-slate-700">Sequential Drift Track (Cycles t-4 to t+1)</span>
+                <span className="text-slate-700">Recorded track (recent profiles and forecast target)</span>
               </div>
               <div className="flex items-center gap-2">
                 <span className="w-4 h-0.5 bg-emerald-400 border-dashed shrink-0"></span>

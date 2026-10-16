@@ -163,7 +163,7 @@ What oceanographic query would you like to explore regarding **Float ${forecast.
                 {isAssistant && (
                   <div className="flex items-center justify-between pb-2 mb-2 border-b border-slate-200/80">
                     <span className="font-bold text-slate-900 text-[11px] flex items-center gap-1">
-                      FloatChat X-RAG Engine
+                      FloatChat
                     </span>
                     {msg.grounding_verified && (
                       <span className="inline-flex items-center gap-1 text-[10px] text-emerald-700 bg-emerald-100/80 px-2 py-0.5 rounded-full font-medium">

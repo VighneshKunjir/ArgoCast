@@ -1,1 +1,4 @@
-graphify-out/graph.json merge=graphify
+* text=auto
+*.pt binary
+*.joblib binary
+*.gz binary

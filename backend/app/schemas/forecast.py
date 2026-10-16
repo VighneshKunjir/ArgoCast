@@ -8,9 +8,9 @@ from pydantic import BaseModel, Field
 class HealthResponse(BaseModel):
     """Health check response."""
     status: str = "ok"
-    service: str = "FloatChat-XRAG-Forecasting-Engine"
+    service: str = "FloatChat-Forecasting-API"
     region: str = "Arabian Sea / Northern Indian Ocean"
-    version: str = "1.2.0-IEEE-Access-Spec"
+    version: str = "2.0.0"
 
 
 class FloatSummary(BaseModel):

@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 """Export a benchmark-trained FloatChat PI-BiLSTM checkpoint as the app's serving model.
 
-The benchmark (experiments/benchmark_10_models/run_benchmark.py) trains the model on
+The benchmark (research/benchmark/run_benchmark.py) trains the model on
 the Arabian Sea 2000-2026 windows but stores only the network weights. This script
 rebuilds everything else the API needs from the same split, so the served model is
 exactly the one evaluated in the benchmark:
@@ -14,8 +14,8 @@ exactly the one evaluated in the benchmark:
 
 Usage (from backend/):
   python scripts/export_model_artifacts.py \
-      --checkpoint experiments/benchmark_10_models/outputs/arabian2000_chronological/models/FloatChat_PI-BiLSTM_seed42.pt \
-      --proc-dir experiments/arabian_sea_2000_2026/data/processed --split chronological
+      --checkpoint research/benchmark/outputs/arabian2000_chronological/models/FloatChat_PI-BiLSTM_seed42.pt \
+      --proc-dir research/pipeline/data/processed --split chronological
 """
 import argparse
 import json

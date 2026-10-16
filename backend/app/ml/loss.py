@@ -65,7 +65,7 @@ class PhysicsConstrainedLoss(nn.Module):
         Compute potential density anomaly sigma_theta (differentiable).
 
         Uses the pure NumPy/PyTorch UNESCO/TEOS-10 polynomial approximation
-        from .ai/rules.md so gradients flow during backprop (gsw C-extension
+        so gradients flow during backprop (gsw C-extension
         calls are not differentiable and must not be used in the loss graph):
         sigma_theta ~= 28.14 - 0.0735*T - 0.00469*T^2 + 0.802*(S - 35.0)
 
@@ -195,7 +195,7 @@ class PhysicsConstrainedLoss(nn.Module):
 
 def test_stability_loss():
     """
-    Acceptance test for TASK-302: backprop through a deliberate density
+    Self-check: backprop through a deliberate density
     inversion produces L_stability > 0.
     """
     print("Testing Physics-Constrained Loss...")

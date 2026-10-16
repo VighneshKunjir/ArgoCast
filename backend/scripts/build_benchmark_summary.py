@@ -2,12 +2,12 @@
 """Condense the benchmark result files into the JSON served by GET /api/benchmark.
 
 Inputs (written by the experiment scripts):
-  experiments/benchmark_10_models/outputs/arabian2000_<split>/metrics.json
-  experiments/benchmark_10_models/outputs/arabian2000_<split>/metrics_1_7.json
-  experiments/benchmark_10_models/outputs/arabian2000_<split>/classification_metrics.json
-  experiments/benchmark_10_models/outputs/mld_fix/mld_fix_results.json (+ mld_fix_seeds.csv)
-  experiments/arabian_sea_2000_2026/outputs/tables/xai_comparison.json
-  experiments/arabian_sea_2000_2026/data/processed/dataset_summary.json (optional)
+  research/benchmark/outputs/arabian2000_<split>/metrics.json
+  research/benchmark/outputs/arabian2000_<split>/metrics_1_7.json
+  research/benchmark/outputs/arabian2000_<split>/classification_metrics.json
+  research/benchmark/outputs/mld_fix/mld_fix_results.json (+ mld_fix_seeds.csv)
+  research/pipeline/outputs/tables/xai_comparison.json
+  research/pipeline/data/processed/dataset_summary.json (optional)
 
 Output:
   app/ml/artifacts/benchmark_results.json
@@ -199,11 +199,11 @@ def xai_block(path: Path):
 
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("--bench-out", type=Path, default=BACKEND / "experiments" / "benchmark_10_models" / "outputs")
+    ap.add_argument("--bench-out", type=Path, default=BACKEND / "research" / "benchmark" / "outputs")
     ap.add_argument("--xai", type=Path,
-                    default=BACKEND / "experiments" / "arabian_sea_2000_2026" / "outputs" / "tables" / "xai_comparison.json")
+                    default=BACKEND / "research" / "pipeline" / "outputs" / "tables" / "xai_comparison.json")
     ap.add_argument("--dataset-summary", type=Path,
-                    default=BACKEND / "experiments" / "arabian_sea_2000_2026" / "data" / "processed" / "dataset_summary.json")
+                    default=BACKEND / "research" / "pipeline" / "data" / "processed" / "dataset_summary.json")
     ap.add_argument("--out", type=Path, default=BACKEND / "app" / "ml" / "artifacts" / "benchmark_results.json")
     args = ap.parse_args()
 

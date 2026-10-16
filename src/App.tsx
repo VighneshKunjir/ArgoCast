@@ -20,6 +20,7 @@ export default function App() {
 
   const [forecast, setForecast] = useState<ForecastResult | null>(null);
   const [historicalProfiles, setHistoricalProfiles] = useState<ArgoProfile[]>([]);
+  const [floatTrack, setFloatTrack] = useState<{ cycle: number; lat: number; lon: number; date: string }[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [lastRefresh, setLastRefresh] = useState<string | null>(null);
@@ -65,6 +66,10 @@ export default function App() {
         // Keep profiles prior to or up to cycle
         const prior = profilesData.filter((p: ArgoProfile) => p.cycle_number <= cycle).slice(-3);
         setHistoricalProfiles(prior);
+        // Real positions: the four profiles up to the base cycle plus the forecast target if observed.
+        const idx = profilesData.findIndex((p: ArgoProfile) => p.cycle_number === cycle);
+        const around = idx >= 0 ? profilesData.slice(Math.max(0, idx - 3), idx + 2) : [];
+        setFloatTrack(around.map((p: ArgoProfile) => ({ cycle: p.cycle_number, lat: p.latitude, lon: p.longitude, date: p.date })));
       } catch (profilesErr) {
         console.error('Historical profiles retrieval error:', profilesErr);
       }
@@ -131,7 +136,7 @@ export default function App() {
           <div className="flex flex-col items-center justify-center py-24 space-y-3">
             <RefreshCw className="w-8 h-8 animate-spin text-cyan-600" />
             <p className="text-xs font-semibold text-slate-500">
-              Initializing FloatChat X-RAG Engine & TEOS-10 Physics Validator...
+              Loading forecast...
             </p>
           </div>
         ) : forecast ? (
@@ -165,6 +170,7 @@ export default function App() {
               <TrajectoryMap
                 forecast={forecast}
                 allFloats={floats}
+                track={floatTrack}
                 onSelectFloat={(wmo) => {
                   setSelectedWmo(wmo);
                   const found = floats.find((f) => f.wmo_id === wmo);
