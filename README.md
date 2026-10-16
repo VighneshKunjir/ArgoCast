@@ -3,7 +3,8 @@
 [![Code DOI](https://zenodo.org/badge/1379753522.svg)](https://doi.org/10.5281/zenodo.23422343)
 [![Data DOI](https://img.shields.io/badge/Data%20DOI-10.5281%2Fzenodo.23423759-blue)](https://doi.org/10.5281/zenodo.23423759)
 [![Release](https://img.shields.io/github/v/release/VighneshKunjir/ArgoCast?label=release)](https://github.com/VighneshKunjir/ArgoCast/releases)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![Code license: MIT](https://img.shields.io/badge/Code%20license-MIT-yellow.svg)](LICENSE)
+[![Data license: CC BY 4.0](https://img.shields.io/badge/Data%20license-CC%20BY%204.0-lightgrey.svg)](https://creativecommons.org/licenses/by/4.0/)
 [![Stars](https://img.shields.io/github/stars/VighneshKunjir/ArgoCast?style=flat)](https://github.com/VighneshKunjir/ArgoCast/stargazers)
 [![Last commit](https://img.shields.io/github/last-commit/VighneshKunjir/ArgoCast/gai-build)](https://github.com/VighneshKunjir/ArgoCast/commits/gai-build)
 
@@ -205,6 +206,14 @@ Profiles come from the Argo Global Data Assembly Centres (delayed-mode and adjus
 
 Argo (2000). Argo float data and metadata from Global Data Assembly Centre (Argo GDAC). SEANOE. https://doi.org/10.17882/42182
 
+The processed profiles, data splits, trained checkpoints, predictions and benchmark results used in the accompanying paper are archived on Zenodo: https://doi.org/10.5281/zenodo.23423759
+
 ## Authors
 
 Vighnesh Walmik Kunjir, M.Tech Computer Science and Engineering (Data Science And Analytics) MIT World Peace University, Pune, India.
+
+## License
+
+- **Code:** MIT License, see [LICENSE](LICENSE). Archived release: https://doi.org/10.5281/zenodo.23422344
+- **Processed data and results** (Zenodo record https://doi.org/10.5281/zenodo.23423759): [Creative Commons Attribution 4.0 International (CC BY 4.0)](https://creativecommons.org/licenses/by/4.0/)
+- **Source Argo data:** freely available from the Argo GDAC; please cite Argo (2000) as above.
