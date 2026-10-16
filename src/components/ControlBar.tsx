@@ -8,6 +8,8 @@ interface FloatItem {
   baseLon: number;
   cycles: number[];
   defaultCycle: number;
+  firstDate?: string;
+  lastDate?: string;
 }
 
 interface ControlBarProps {
@@ -44,11 +46,10 @@ export const ControlBar: React.FC<ControlBarProps> = ({
   refreshCount
 }) => {
   const currentFloat = floats.find((f) => f.wmo_id === selectedWmo);
-  const allCycles = currentFloat?.cycles || [85, 86, 87, 88, 89, 90, 91, 92, 93, 94];
-  // The forecast model needs 3 prior input cycles (t-3, t-2, t-1), so the first
-  // 3 recorded cycles of a float can never be a forecast base cycle. Hide them
-  // to prevent avoidable "Bad Request" forecast errors.
-  const availableCycles = allCycles.length > 3 ? allCycles.slice(3) : allCycles;
+  const allCycles = currentFloat?.cycles || [];
+  // The selected base cycle is t-1; the model also needs the two profiles before it
+  // (t-3, t-2), so the first two recorded cycles of a float cannot be a base cycle.
+  const availableCycles = allCycles.length > 2 ? allCycles.slice(2) : allCycles;
 
   return (
     <div className="bg-white border-b border-slate-200 px-4 sm:px-6 py-3 shadow-xs">
@@ -66,7 +67,7 @@ export const ControlBar: React.FC<ControlBarProps> = ({
             >
               {floats.map((f) => (
                 <option key={f.wmo_id} value={f.wmo_id}>
-                  WMO {f.wmo_id} — {f.name.split('(')[1]?.replace(')', '') || f.name}
+                  WMO {f.wmo_id}{f.firstDate && f.lastDate ? ` · ${f.firstDate.slice(0, 4)}-${f.lastDate.slice(0, 4)}` : ''} · {f.cycles.length} profiles
                 </option>
               ))}
             </select>
@@ -82,11 +83,15 @@ export const ControlBar: React.FC<ControlBarProps> = ({
                 onChange={(e) => onSelectCycle(Number(e.target.value))}
                 className="bg-slate-50 border border-slate-300 text-slate-900 text-xs rounded-lg focus:ring-cyan-500 focus:border-cyan-500 p-2 font-medium"
               >
-                {availableCycles.map((c) => (
-                  <option key={c} value={c}>
-                    Cycle {c} → Predict Cyc {c + 1}
-                  </option>
-                ))}
+                {availableCycles.map((c) => {
+                  const pos = allCycles.indexOf(c);
+                  const next = pos + 1 < allCycles.length ? allCycles[pos + 1] : null;
+                  return (
+                    <option key={c} value={c}>
+                      Cycle {c} → {next !== null ? `Cyc ${next}` : 'next (not observed yet)'}
+                    </option>
+                  );
+                })}
               </select>
             </div>
           </div>

@@ -3,12 +3,12 @@ Monte Carlo Dropout Uncertainty Quantification Service (calibrated)
 
 - Keeps dropout active during evaluation and runs N stochastic forward passes
 - Computes mean, std, 90% CI, 95% CI per depth level
-- NEW: multiplies the raw dropout std by a per-variable scale factor read from
-  app/ml/artifacts/uq_calibration.json (fitted on validation floats only).
-  Raw dropout intervals covered only ~58% (temp) / ~52% (sal) of test targets at the
-  nominal 95% level; the scaled intervals cover ~96% / ~95%.
+- Multiplies the raw dropout std by a per-variable scale factor read from
+  app/ml/artifacts/uq_calibration.json (fitted on the validation windows only).
+  On the 2019-2026 test windows raw 95% intervals covered about 47% (temp) / 49% (sal)
+  of observations; the scaled intervals cover about 95%.
   If the file is missing, factors default to 1.0 (raw behaviour).
-- The model is returned to eval() mode afterwards (previously left in train mode).
+- The model is returned to eval() mode afterwards.
 """
 import json
 from dataclasses import dataclass

@@ -144,96 +144,135 @@ def composite_similarity(query_vec: np.ndarray, query_lat: float, query_lon: flo
     return COSINE_WEIGHT * cos_sim + SPATIAL_WEIGHT * spat_sim
 
 
+_INDEX_CACHE: Dict[str, object] = {"key": None}
+
+
+def _candidate_index(db: Session) -> Dict[str, np.ndarray]:
+    """All QC-pass profiles as one (n, 32) T+S matrix plus metadata, cached in memory.
+
+    Built with two queries and reused until the number of profiles or levels changes,
+    so a search over tens of thousands of profiles costs a few milliseconds instead of
+    two database round trips per candidate.
+    """
+    from sqlalchemy import func
+
+    key = (db.query(func.count(ArgoProfile.profile_id)).scalar(),
+           db.query(func.count(ProfileLevel.id)).scalar())
+    if _INDEX_CACHE.get("key") == key:
+        return _INDEX_CACHE["data"]  # type: ignore[return-value]
+
+    profiles = (
+        db.query(ArgoProfile)
+        .filter(ArgoProfile.qc_status.in_(["QC_PASS_FLAG_1", "QC_PASS_FLAG_2"]))
+        .all()
+    )
+    row = {p.profile_id: i for i, p in enumerate(profiles)}
+    depth_col = {int(d): k for k, d in enumerate(STANDARD_DEPTHS)}
+    mat = np.full((len(profiles), 2 * len(STANDARD_DEPTHS)), np.nan)
+    for pid, depth, temp, sal in db.query(
+        ProfileLevel.profile_id, ProfileLevel.depth_dbar, ProfileLevel.temperature, ProfileLevel.salinity
+    ):
+        i = row.get(pid)
+        k = depth_col.get(int(depth))
+        if i is not None and k is not None:
+            mat[i, k] = temp
+            mat[i, len(STANDARD_DEPTHS) + k] = sal
+    complete = ~np.isnan(mat).any(axis=1)
+    keep = np.where(complete)[0]
+    data = {
+        "vectors": mat[keep],
+        "norms": np.linalg.norm(mat[keep], axis=1),
+        "lat": np.array([profiles[i].latitude for i in keep], dtype=float),
+        "lon": np.array([profiles[i].longitude for i in keep], dtype=float),
+        "wmo": np.array([profiles[i].wmo_id for i in keep]),
+        "profiles": [profiles[i] for i in keep],
+    }
+    _INDEX_CACHE.update(key=key, data=data)
+    return data
+
+
+def _haversine_many(lat1: float, lon1: float, lat2: np.ndarray, lon2: np.ndarray) -> np.ndarray:
+    la1, lo1 = np.radians(lat1), np.radians(lon1)
+    la2, lo2 = np.radians(lat2), np.radians(lon2)
+    a = np.sin((la2 - la1) / 2) ** 2 + np.cos(la1) * np.cos(la2) * np.sin((lo2 - lo1) / 2) ** 2
+    return 2 * EARTH_RADIUS_KM * np.arctan2(np.sqrt(a), np.sqrt(1 - a))
+
+
 def find_analogues(wmo_id: str, cycle: int, db: Session,
                    n_results: int = 3,
                    max_distance_km: float = 500.0,
                    min_cosine: float = 0.5,
-                   exclude_same_float: bool = True) -> List[Dict]:
+                   exclude_same_float: bool = True,
+                   query_vector: Optional[np.ndarray] = None,
+                   query_lat: Optional[float] = None,
+                   query_lon: Optional[float] = None) -> List[Dict]:
     """
-    Find top N historical profiles matching the query profile.
-    
-    Args:
-        wmo_id: Target float WMO ID
-        cycle: Target cycle number
-        db: Database session
-        n_results: Number of top matches to return
-        max_distance_km: Maximum spatial distance for candidates
-        min_cosine: Minimum cosine similarity threshold
-        exclude_same_float: Exclude profiles from same float (avoid self-match)
-    
+    Find the top N historical profiles matching the query profile.
+
+    Score = 0.75 * cosine(T+S vectors) + 0.25 * exp(-3 d / d_max), with d the Haversine
+    distance and d_max = max_distance_km (spatial term is 0 beyond d_max). Only QC flag
+    1/2 profiles are candidates; profiles of the query float are excluded by default.
+
     Returns:
-        List of dicts with match metadata and similarity scores
+        List of dicts with match metadata and similarity scores, best first.
     """
-    # Get query profile
-    query_profile_id = f"ARGO_{wmo_id}_CYC{cycle:03d}"
-    query_vec, query_meta = build_profile_vector(query_profile_id, db)
-    
-    if query_vec is None:
+    if query_vector is not None:
+        # Search for analogues of a given T+S vector (e.g. a forecast) at a given position.
+        query_vec = np.asarray(query_vector, dtype=float)
+        q_lat, q_lon = float(query_lat or 0.0), float(query_lon or 0.0)
+    else:
+        query_profile_id = f"ARGO_{wmo_id}_CYC{cycle:03d}"
+        query_vec, query_meta = build_profile_vector(query_profile_id, db)
+        if query_vec is None:
+            return []
+        q_lat = float(query_meta.get('latitude', 0))
+        q_lon = float(query_meta.get('longitude', 0))
+
+    idx = _candidate_index(db)
+    if len(idx["vectors"]) == 0:
         return []
-    
-    query_lat = query_meta.get('latitude', 0)
-    query_lon = query_meta.get('longitude', 0)
-    
-    # Get all candidate profiles from database
-    candidates_query = db.query(ArgoProfile).filter(
-        ArgoProfile.qc_status.in_(['QC_PASS_FLAG_1', 'QC_PASS_FLAG_2'])
-    )
-    
+    q_norm = np.linalg.norm(query_vec)
+    if q_norm == 0:
+        return []
+    cos = idx["vectors"] @ query_vec / (idx["norms"] * q_norm)
+    dist = _haversine_many(q_lat, q_lon, idx["lat"], idx["lon"])
+    spat = np.where(dist < max_distance_km, np.exp(-dist / (max_distance_km / 3.0)), 0.0)
+    score = COSINE_WEIGHT * cos + SPATIAL_WEIGHT * spat
+    ok = cos >= min_cosine
     if exclude_same_float:
-        candidates_query = candidates_query.filter(ArgoProfile.wmo_id != wmo_id)
-    
-    candidate_profiles = candidates_query.all()
-    
-    if not candidate_profiles:
+        ok &= idx["wmo"] != str(wmo_id)
+    cand = np.where(ok)[0]
+    if cand.size == 0:
         return []
-    
-    # Score all candidates
+    # best profile per float, so the citations come from n_results different floats
+    top, seen = [], set()
+    for i in cand[np.argsort(-score[cand], kind="stable")]:
+        if idx["wmo"][i] in seen:
+            continue
+        seen.add(idx["wmo"][i])
+        top.append(i)
+        if len(top) == n_results:
+            break
+
     results = []
-    for cand in candidate_profiles:
-        cand_id = cand.profile_id
-        cand_vec, cand_meta = build_profile_vector(cand_id, db)
-        
-        if cand_vec is None:
-            continue
-        
-        # Cosine similarity check (fast filter)
-        cos_sim = cosine_similarity(query_vec, cand_vec)
-        if cos_sim < min_cosine:
-            continue
-        
-        # Full composite score
-        score = composite_similarity(
-            query_vec, query_lat, query_lon,
-            cand_vec, cand_meta.get('latitude', 0), cand_meta.get('longitude', 0),
-            max_distance_km
-        )
-        
-        if score > 0:
-            results.append({
-                'profile_id': cand_id,
-                'wmo_id': cand_meta.get('wmo_id'),
-                'cycle': cand_meta.get('cycle'),
-                'date': cand_meta.get('date'),
-                'latitude': cand_meta.get('latitude'),
-                'longitude': cand_meta.get('longitude'),
-                'distance_km': haversine_distance(query_lat, query_lon,
-                                                  cand_meta.get('latitude', 0),
-                                                  cand_meta.get('longitude', 0)),
-                'cosine_similarity': cos_sim,
-                'spatial_similarity': spatial_similarity(query_lat, query_lon,
-                                                          cand_meta.get('latitude', 0),
-                                                          cand_meta.get('longitude', 0),
-                                                          max_distance_km),
-                'composite_score': score,
-                'raw_netcdf_source': cand_meta.get('raw_netcdf_source'),
-                'gdac_archive_path': cand_meta.get('gdac_archive_path'),
-                'qc_status': cand_meta.get('qc_status')
-            })
-    
-    # Sort by composite score descending
-    results.sort(key=lambda x: x['composite_score'], reverse=True)
-    
-    return results[:n_results]
+    for i in top:
+        p = idx["profiles"][i]
+        results.append({
+            'profile_id': p.profile_id,
+            'wmo_id': p.wmo_id,
+            'cycle': p.cycle_number,
+            'date': str(p.date),
+            'latitude': p.latitude,
+            'longitude': p.longitude,
+            'distance_km': float(dist[i]),
+            'cosine_similarity': float(cos[i]),
+            'spatial_similarity': float(spat[i]),
+            'composite_score': float(score[i]),
+            'raw_netcdf_source': p.raw_netcdf_source,
+            'gdac_archive_path': p.gdac_archive_path,
+            'qc_status': p.qc_status,
+        })
+    return results
 
 
 def format_evidence_citation(match: Dict) -> Dict:
@@ -258,11 +297,18 @@ def format_evidence_citation(match: Dict) -> Dict:
 
 
 def get_evidence_links(wmo_id: str, cycle: int, db: Session,
-                       n_results: int = 3) -> List[Dict]:
+                       n_results: int = 3,
+                       query_vector: Optional[np.ndarray] = None,
+                       query_lat: Optional[float] = None,
+                       query_lon: Optional[float] = None) -> List[Dict]:
     """
-    Main entry point: get formatted evidence citations for a forecast.
+    Main entry point: formatted evidence citations.
+
+    Without query_vector the stored profile (wmo_id, cycle) is the query; with it, the
+    given T+S vector (for example a forecast) at (query_lat, query_lon) is the query.
     """
-    matches = find_analogues(wmo_id, cycle, db, n_results=n_results)
+    matches = find_analogues(wmo_id, cycle, db, n_results=n_results, query_vector=query_vector,
+                             query_lat=query_lat, query_lon=query_lon)
     return [format_evidence_citation(m) for m in matches]
 
 

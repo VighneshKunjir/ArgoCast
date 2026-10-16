@@ -360,9 +360,11 @@ def make_figures(fig_dir, tag, results, extras):
             keep = np.array([not m.startswith("Climatology") for m in models])
             hi = max(ci[:, 1][keep].max(), v[keep].max())
             if (v[~keep] > 1.6 * hi).any():
-                ax.set_ylim(lo * 0.9, hi * 1.08)
-                for i in np.where(~keep & (v > 1.6 * hi))[0]:
-                    ax.annotate(f"{v[i]:.3f}", (i, hi * 1.05), ha="center", fontsize=7)
+                top = hi * 1.08
+                ax.set_ylim(lo * 0.9, top)
+                for i in np.where(v > top)[0]:   # label every bar that runs past the axis
+                    ax.annotate(f"{v[i]:.3f}", (i, hi * 1.05), ha="center", fontsize=6, rotation=90, va="top",
+                                color="white", fontweight="bold")
         else:
             obs = extras["observed_inversion_teos10_pct"]
             ax.axhline(obs, color="black", ls="--", lw=0.8, label=f"observed profiles {obs:.1f}%")

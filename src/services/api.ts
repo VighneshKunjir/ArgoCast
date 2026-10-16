@@ -1,4 +1,4 @@
-import { ForecastResult, ArgoProfile, ChatMessage } from '../types.ts';
+import { ForecastResult, ArgoProfile, ChatMessage, BenchmarkResults, ModelInfo } from '../types.ts';
 
 const API_BASE = '/api';
 
@@ -9,6 +9,8 @@ export interface FloatSummary {
   baseLon: number;
   cycles: number[];
   defaultCycle: number;
+  firstDate?: string;
+  lastDate?: string;
 }
 
 export interface ChatResponse {
@@ -47,6 +49,21 @@ export const apiService = {
       const detail = await parseErrorDetail(res, res.statusText);
       throw new Error(`Forecast computation failed: ${detail}`);
     }
+    return res.json();
+  },
+
+  async getBenchmark(): Promise<BenchmarkResults> {
+    const res = await fetch(`${API_BASE}/benchmark`);
+    if (!res.ok) {
+      const detail = await parseErrorDetail(res, res.statusText);
+      throw new Error(`Failed to load benchmark results: ${detail}`);
+    }
+    return res.json();
+  },
+
+  async getModelInfo(): Promise<ModelInfo> {
+    const res = await fetch(`${API_BASE}/model`);
+    if (!res.ok) throw new Error(`Failed to load model info: ${res.statusText}`);
     return res.json();
   },
 

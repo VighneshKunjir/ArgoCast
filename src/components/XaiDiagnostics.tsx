@@ -186,8 +186,10 @@ export const XaiDiagnostics: React.FC<XaiDiagnosticsProps> = ({ forecast }) => {
                   <tr key={dp.depth_dbar} className="hover:bg-slate-50">
                     <td className="px-3 py-1 text-slate-900">{dp.depth_dbar}</td>
                     <td className="px-3 py-1 text-purple-700 font-semibold">{dp.sigma_theta != null ? dp.sigma_theta.toFixed(3) : '--'}</td>
-                    <td className="px-3 py-1 text-slate-600">{dp.buoyancy_frequency_n2}</td>
-                    <td className="px-3 py-1 text-right text-emerald-600 font-bold">PASS</td>
+                    <td className="px-3 py-1 text-slate-600">{dp.depth_dbar === 5 ? '--' : dp.buoyancy_frequency_n2.toExponential(2)}</td>
+                    <td className={`px-3 py-1 text-right font-bold ${dp.depth_dbar === 5 || dp.buoyancy_frequency_n2 > 0 ? 'text-emerald-600' : 'text-amber-600'}`}>
+                      {dp.depth_dbar === 5 || dp.buoyancy_frequency_n2 > 0 ? 'PASS' : 'CHECK'}
+                    </td>
                   </tr>
                 ))}
               </tbody>

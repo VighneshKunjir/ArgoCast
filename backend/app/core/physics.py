@@ -139,7 +139,8 @@ def compute_brunt_vaisala(sigma: np.ndarray,
         Length N-1 for N input levels (mid-point depths)
     """
     stability, _, _ = compute_static_stability(sigma, depths)
-    N2 = (g / rho0) * stability / 1000.0  # Convert kg/m⁴ to kg/m³ per m
+    # stability is d(sigma)/dz in kg m-3 per dbar (~ per metre), so N2 = g / rho0 * d(sigma)/dz
+    N2 = (g / rho0) * stability
     return np.maximum(N2, 0.0)  # N² cannot be negative
 
 

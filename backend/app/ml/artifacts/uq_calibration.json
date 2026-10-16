@@ -1,7 +1,8 @@
 {
-  "temp": 3.7194790723030744,
-  "sal": 4.574981769222976,
-  "method": "95th percentile of |y-mu|/sd on validation floats divided by 1.96",
-  "fitted_on": "validation floats of the shipped split (metadata.json val_floats)",
-  "note": "Multiplies the MC-dropout std; fitted on one split, check stability across splits"
+  "temp": 4.161443381749768,
+  "sal": 4.635452890464063,
+  "method": "95th percentile of |y-mu|/sd on the validation windows divided by 1.96",
+  "fitted_on": "validation windows of the chronological split (4780 windows)",
+  "mc_passes": 50,
+  "note": "Multiplies the MC-dropout std; the forecast mean is unchanged"
 }

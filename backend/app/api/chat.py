@@ -75,7 +75,7 @@ def _load_profile_context(wmo_id: str, cycle: int) -> Dict[str, Any]:
                 .all()
             )
             for l in levels:
-                ctx["levels"][int(l.depth_dbar)] = (float(l.temperature), float(l.salinity))
+                ctx["levels"][int(l.depth_dbar)] = (round(float(l.temperature), 3), round(float(l.salinity), 3))
             ctx["from_database"] = bool(ctx["levels"])
         finally:
             db.close()
@@ -112,6 +112,72 @@ def _thermocline_estimate(ctx: Dict[str, Any]) -> Optional[int]:
     return best_d
 
 
+def _physics(ctx: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+    """TEOS-10 diagnostics of the observed profile in ctx (None when levels are missing)."""
+    if len(ctx["levels"]) != len(STANDARD_DEPTHS):
+        return None
+    try:
+        import numpy as np
+        from app.core.physics import validate_profile_physics
+
+        depths = np.array(sorted(ctx["levels"].keys()), dtype=float)
+        t = np.array([ctx["levels"][int(d)][0] for d in depths])
+        s = np.array([ctx["levels"][int(d)][1] for d in depths])
+        ph = validate_profile_physics(t, s, depths, ctx["latitude"], ctx["longitude"])
+        n2 = np.asarray(ph["brunt_vaisala_N2"])
+        k = int(np.argmax(n2))
+        return {
+            "stable": bool(ph["is_gravitationally_stable"]),
+            "violations": int(ph["stability_violations"]),
+            "min_grad": float(np.min(ph["stability"])),
+            "n2_max": float(n2[k]),
+            "n2_depth": int((depths[k] + depths[k + 1]) / 2),
+            "mld": None if np.isnan(ph["mld_dbar"]) else int(ph["mld_dbar"]),
+        }
+    except Exception:
+        return None
+
+
+def _top_evidence(ctx: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+    """Best evidence-link analogue of the observed profile, from the database."""
+    if "_evidence" in ctx:
+        return ctx["_evidence"]
+    ctx["_evidence"] = None
+    try:
+        from app.db.session import SessionLocal
+        from app.core.evidence import get_evidence_links
+
+        db = SessionLocal()
+        try:
+            links = get_evidence_links(ctx["wmo_id"], int(ctx["matched_cycle"]), db, n_results=3)
+        finally:
+            db.close()
+        ctx["_evidence_all"] = links
+        ctx["_evidence"] = links[0] if links else None
+    except Exception:
+        pass
+    return ctx["_evidence"]
+
+
+def _evidence_text(ctx: Dict[str, Any], label: str = "Analogous historical profile") -> str:
+    e = _top_evidence(ctx)
+    if not e:
+        return ""
+    return (f" {label}: float {e['wmo_id']} cycle {e['cycle']} ({e['date']}, "
+            f"{e['distance_km']:.1f} km away, cosine {e['cosine_similarity']:.3f}).")
+
+
+def _benchmark_summary() -> Optional[Dict[str, Any]]:
+    try:
+        import json
+        from pathlib import Path
+
+        path = Path(__file__).resolve().parents[1] / "ml" / "artifacts" / "benchmark_results.json"
+        return json.loads(path.read_text()).get("summary")
+    except Exception:
+        return None
+
+
 def _answer_thermocline(ctx: Dict[str, Any]) -> str:
     wmo, cyc = ctx["wmo_id"], ctx["matched_cycle"]
     at100 = _level(ctx, 100)
@@ -127,10 +193,11 @@ def _answer_thermocline(ctx: Dict[str, Any]) -> str:
         f"Surface water at {ds} dbar is {ts}°C / {ss} PSU, cooling to {t100}°C at {d100} dbar "
         f"(salinity {s100} PSU). This sharp gradient is driven by surface solar heating "
         f"confined above the seasonal pycnocline plus wind-driven mixing in the upper 50 dbar, "
-        f"with Ekman pumping ventilating heat downward. The forecast XAI attribution "
-        f"(Integrated Gradients) assigns ~58% importance to cycle t-1, confirming the "
-        f"thermocline position is inherited from the immediate upstream profile. "
-        f"Analogous historical state: float 2903334 cycle 91 (18.5 km, cosine 0.999)."
+        f"with Ekman pumping ventilating heat downward. In the forecast, Integrated Gradients "
+        f"usually gives the most recent input cycle (t-1) the largest share of the attribution, "
+        f"so the thermocline position is largely inherited from the latest profile; the XAI tab "
+        f"shows the exact weights for this forecast."
+        + _evidence_text(ctx)
     )
 
 
@@ -147,8 +214,8 @@ def _answer_salinity(ctx: Dict[str, Any]) -> str:
         f"(temperature {t150}°C), versus {ss} PSU at the surface ({ds} dbar, {ts}°C). "
         f"Elevated mid-depth salinity reflects Arabian Sea High Salinity Water (ASHSW) "
         f"formed by excess evaporation in the northern basin and advected southward by the "
-        f"mesoscale eddy field, with a Persian Gulf Water signature near the halocline. "
-        f"Evidence: float 2903334 cycle 92 (22.1 km, cosine 0.997)."
+        f"mesoscale eddy field, with a Persian Gulf Water signature near the halocline."
+        + _evidence_text(ctx, "Evidence")
     )
 
 
@@ -156,43 +223,52 @@ def _answer_stability(ctx: Dict[str, Any]) -> str:
     wmo, cyc = ctx["wmo_id"], ctx["matched_cycle"]
     surf = _level(ctx, 5)
     deep = _level(ctx, 1000)
-    if surf is None or deep is None:
+    ph = _physics(ctx)
+    if surf is None or deep is None or ph is None:
         return _answer_default(ctx)
     (_, (ts, ss)) = surf
     (_, (td, sd)) = deep
+    if ph["stable"]:
+        verdict = ("is gravitationally stable under TEOS-10: potential density increases with depth "
+                   "at all 16 levels, satisfying $\\frac{\\partial \\sigma_\\theta}{\\partial z} \\ge 0$")
+    else:
+        verdict = (f"has {ph['violations']} level pair(s) where potential density decreases with depth "
+                   f"(TEOS-10), so $\\frac{{\\partial \\sigma_\\theta}}{{\\partial z}} \\ge 0$ is not met everywhere; "
+                   f"small inversions like this are common in raw observations")
     return (
-        f"The profile for float {wmo} cycle {cyc} is gravitationally stable under TEOS-10: "
-        f"potential density increases monotonically with depth, satisfying "
-        f"$\\frac{{\\partial \\sigma_\\theta}}{{\\partial z}} \\ge 0$ at all 16 canonical levels. "
-        f"Surface ({ts}°C, {ss} PSU) to abyssal ({td}°C, {sd} PSU) stratification gives a "
-        f"minimum density gradient of ~0.0031 kg/m³/dbar at the mixed-layer base with zero "
-        f"density inversions. Brunt-Väisälä frequency $N^2$ peaks near 2.14e-4 s⁻² in the "
-        f"main thermocline, marking maximum static stability."
+        f"The observed profile for float {wmo} cycle {cyc} {verdict}. "
+        f"From the surface ({ts}°C, {ss} PSU) to 1000 dbar ({td}°C, {sd} PSU), the smallest vertical "
+        f"density gradient is {ph['min_grad']:.2e} kg/m³ per dbar. The buoyancy frequency $N^2$ peaks at "
+        f"{ph['n2_max']:.2e} s⁻² near {ph['n2_depth']} dbar, the most strongly stratified part of the column."
     )
 
 
 def _answer_uncertainty(ctx: Dict[str, Any]) -> str:
     wmo, cyc = ctx["wmo_id"], ctx["matched_cycle"]
+    b = _benchmark_summary() or {}
+    cov = b.get("coverage95_calibrated_chrono")
+    cov_txt = (f" On the 2019-2026 test windows the calibrated 95% intervals contained {cov:.1f}% of "
+               f"observed temperatures." if cov else "")
     return (
-        f"Forecast uncertainty for float {wmo} cycle {cyc} comes from 50-pass Monte Carlo "
-        f"Dropout (p=0.2): each depth reports mean ± std with 90% and 95% credible intervals. "
-        f"Uncertainty is widest in the thermocline (75-200 dbar) where vertical gradients are "
-        f"steepest, and narrowest at 1000 dbar where the water column is quiescent. "
-        f"Use the shaded 95% CI bands on the profile chart: any observation falling inside the "
-        f"band is consistent with the forecast at that confidence level."
+        f"Forecast uncertainty for float {wmo} from base cycle {cyc} comes from 50-pass Monte Carlo "
+        f"Dropout (p=0.2): each depth reports mean ± std with 90% and 95% intervals. Raw dropout "
+        f"spread is too narrow, so it is multiplied by one factor per variable fitted on validation "
+        f"data.{cov_txt} Uncertainty is widest in the thermocline (75-200 dbar), where vertical "
+        f"gradients are steepest, and narrowest at 1000 dbar. An observation inside the shaded 95% "
+        f"band is consistent with the forecast at that level."
     )
 
 
 def _answer_xai(ctx: Dict[str, Any]) -> str:
     wmo, cyc = ctx["wmo_id"], ctx["matched_cycle"]
     return (
-        f"Captum Integrated Gradients attribution for float {wmo} cycle {cyc} decomposes the "
-        f"forecast into temporal lag weights over the 3-cycle input window: cycle t-1 carries "
-        f"~58% importance (immediate upstream profile sets pycnocline and mixed-layer boundary "
-        f"conditions), t-2 ~27% (mesoscale eddy advection memory), and t-3 ~15% (seasonal "
-        f"stratification trend). Cross-depth saliency shows surface-to-50 dbar heat flux "
-        f"dominating the 75-150 dbar thermocline prediction (~68% of attribution), consistent "
-        f"with wind-stress penetration controlling thermocline shoaling."
+        f"Integrated Gradients (Captum) splits a forecast for float {wmo} from base cycle {cyc} into "
+        f"contributions of the three input cycles (t-3, t-2, t-1) and of each input depth; the "
+        f"contributions add up exactly to the change in the forecast, and the XAI tab shows the "
+        f"weights for the current forecast. In our evaluation on 100 test windows, the most recent "
+        f"cycle carried about 64% of the attribution for temperature at 100 dbar and the two older "
+        f"cycles together about a third. Integrated Gradients matched LIME in faithfulness (0.980 vs "
+        f"0.978), was perfectly repeatable, and ran about 36 times faster than KernelSHAP."
     )
 
 
@@ -203,8 +279,8 @@ def _answer_evidence(ctx: Dict[str, Any]) -> str:
         f"citations ranked by composite score ($0.75 \\times$ profile cosine similarity + "
         f"$0.25 \\times$ Haversine spatial proximity, QC flags 1/2 only). Open any citation "
         f"card and click Inspect Profile & Lineage to see the raw GDAC NetCDF path, the archive "
-        f"lineage, and the depth-resolved evidence table side-by-side with the forecast. "
-        f"Top analogue: float 2903334 cycle 91 (18.5 km, cosine 0.999)."
+        f"lineage, and the depth-resolved evidence table side-by-side with the forecast."
+        + _evidence_text(ctx, "Top analogue of this observed profile")
     )
 
 
@@ -212,17 +288,18 @@ def _answer_mld(ctx: Dict[str, Any]) -> str:
     wmo, cyc = ctx["wmo_id"], ctx["matched_cycle"]
     surf = _level(ctx, 5)
     at50 = _level(ctx, 50)
-    if surf is None or at50 is None:
+    ph = _physics(ctx)
+    if surf is None or at50 is None or ph is None:
         return _answer_default(ctx)
     (_, (ts, _)) = surf
     (d50, (t50, s50)) = at50
-    dt = ts - t50
+    mld_txt = (f"about {ph['mld']} dbar" if ph["mld"] else "deeper than the grid resolves")
     return (
-        f"Mixed-layer depth for float {wmo} cycle {cyc} is diagnosed near 40 m: surface "
-        f"temperature {ts}°C versus {t50}°C at {d50} dbar (ΔT ≈ {_fmt(dt)}°C, salinity {s50} PSU). "
-        f"The layer above ~40 dbar is homogenized by wind stirring and convective overturning, "
-        f"while the temperature drop below marks the seasonal thermocline onset where "
-        f"$N^2$ rises sharply."
+        f"The mixed-layer depth for float {wmo} cycle {cyc} is {mld_txt} (first level where potential "
+        f"density exceeds its 5 dbar value by 0.03 kg/m³; the 16-level grid limits the resolution to "
+        f"5, 20, 50, 75 dbar near the surface). Surface temperature is {ts}°C versus {t50}°C at "
+        f"{d50} dbar (salinity {s50} PSU). Note: the forecast model tends to place the mixed layer "
+        f"a few metres too shallow, a known side effect of its stability penalty."
     )
 
 
@@ -253,29 +330,43 @@ def _answer_default(ctx: Dict[str, Any]) -> str:
         )
     (_, (ts, ss)) = surf
     (d100, (t100, s100)) = at100
+    ph = _physics(ctx)
     src = "database observations" if ctx["from_database"] else "climatology fallback"
+    extra = ""
+    if ph is not None:
+        mld = f"mixed-layer depth about {ph['mld']} dbar" if ph["mld"] else "a deep mixed layer"
+        stab = "a gravitationally stable" if ph["stable"] else "a not fully stable"
+        extra = f", {mld}, and {stab} TEOS-10 density profile"
     return (
-        f"Based on {src} for float {wmo} cycle {cyc}: surface {ts}°C / {ss} PSU, "
-        f"{t100}°C with {s100} PSU at {d100} dbar, mixed-layer depth ~40 m, and a "
-        f"gravitationally stable TEOS-10 profile "
-        f"($\\frac{{\\partial \\sigma_\\theta}}{{\\partial z}} \\ge 0$). Key evidence: float "
-        f"2903334 cycle 91 (18.5 km). Ask me about the thermocline, salinity structure, "
-        f"physical stability, forecast uncertainty, XAI attribution, or NetCDF provenance."
+        f"Based on {src} for float {wmo} cycle {cyc} ({ctx['date']}): surface {ts}°C / {ss} PSU, "
+        f"{t100}°C with {s100} PSU at {d100} dbar{extra}."
+        + _evidence_text(ctx)
+        + " Ask me about the thermocline, salinity structure, physical stability, forecast "
+          "uncertainty, XAI attribution, model benchmarks or NetCDF provenance."
     )
 
 
 def _answer_benchmarks(ctx: Dict[str, Any]) -> str:
+    b = _benchmark_summary()
+    if not b:
+        return ("Benchmark results are not available in this installation "
+                "(app/ml/artifacts/benchmark_results.json is missing).")
     return (
-        "FloatChat X-RAG (Bi-LSTM + MC Dropout with TEOS-10 constraint) model benchmark evaluation results on test set:\n"
-        "- Temperature Profile RMSE: 0.5756°C (compared to 0.6326°C for Persistence Baseline, an ~9.0% error reduction).\n"
-        "- Temperature Profile MAE: 0.3502°C (vs 0.3407°C persistence).\n"
-        "- Salinity Profile RMSE: 0.1105 PSU.\n"
-        "- Thermocline RMSE (50–200 dbar): 0.8709°C (vs 0.9786°C persistence).\n"
-        "- Abyssal Deep RMSE (500–1000 dbar): 0.3310°C (vs 0.3044°C persistence).\n"
-        "- Physical Density Inversion Rate: 0.0% (strictly 0 unphysical inversions via TEOS-10 loss penalty, "
-        "compared to 25.33% violations in persistence and 25.76% in gradient boosting).\n"
-        "- MC Dropout Uncertainty Calibration: 94.8% empirical coverage inside 95% confidence intervals.\n"
-        "All comparative metrics and bar charts are also viewable on the Benchmarks tab in the web dashboard."
+        f"FloatChat PI-BiLSTM was compared with {b['n_baselines']} baselines on Arabian Sea Argo "
+        f"profiles ({b['n_profiles']:,} profiles, {b['n_floats']} floats, 2001-2026), on two test sets: "
+        f"future years 2019-2026 ({b['n_test_chrono']:,} forecasts) and {b['n_unseen_floats']} floats never "
+        f"seen in training ({b['n_test_unseen']:,} forecasts).\n"
+        f"- Temperature RMSE: {b['temp_rmse_chrono']:.3f} °C and {b['temp_rmse_unseen']:.3f} °C, about "
+        f"{b['skill_chrono']:.0f}-{b['skill_unseen']:.0f}% lower than persistence and within 0.005 °C of the most "
+        f"accurate model on each test set.\n"
+        f"- Salinity RMSE: {b['sal_rmse_chrono']:.3f} and {b['sal_rmse_unseen']:.3f} PSU.\n"
+        f"- Forecasts with a density inversion larger than 0.03 kg/m³: {b['inv_chrono']:.2f}% and "
+        f"{b['inv_unseen']:.2f}%, against {b['inv_others_min']:.1f}-{b['inv_others_max']:.1f}% for the other "
+        f"learned models and {b['inv_obs_min']:.2f}-{b['inv_obs_max']:.2f}% in observed profiles.\n"
+        f"- Calibrated 95% intervals covered {b['coverage95_calibrated_chrono']:.1f}% and "
+        f"{b['coverage95_calibrated_unseen']:.1f}% of observations.\n"
+        f"- Known weakness: mixed-layer depth error is about 4 m larger than without the physics loss.\n"
+        f"The Benchmarks tab shows the full tables and charts."
     )
 
 
@@ -396,8 +487,6 @@ def _build_citations(wmo_id: str, cycle: int, ctx: Dict[str, Any]) -> List[str]:
             citations.append(f"Float {link.get('wmo_id')} Cycle {link.get('cycle')}")
     except Exception:
         pass
-    if len(citations) == 1:
-        citations.append("Float 2903334 Cycle 91")
     # De-duplicate while preserving order.
     seen = set()
     unique = []
@@ -427,7 +516,7 @@ def generate_chat_response(query: str, wmo_id: str, cycle: int) -> dict:
         "forecast_context": {
             "wmo_id": wmo_id,
             "target_cycle": cycle,
-            "predicted_cycle": cycle + 1,
+            "predicted_cycle": cycle + 1,  # chat cycle = selected base cycle
         },
     }
 

@@ -8,14 +8,14 @@ import { ChatPanel } from './components/ChatPanel.tsx';
 import { EvaluationBenchmarks } from './components/EvaluationBenchmarks.tsx';
 import { TrajectoryMap } from './components/TrajectoryMap.tsx';
 import { ForecastResult, ArgoProfile } from './types.ts';
-import { apiService } from './services/api.ts';
+import { apiService, FloatSummary } from './services/api.ts';
 import { RefreshCw, AlertCircle } from 'lucide-react';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<string>('forecast');
-  const [floats, setFloats] = useState<any[]>([]);
-  const [selectedWmo, setSelectedWmo] = useState<string>('3902114');
-  const [selectedCycle, setSelectedCycle] = useState<number>(92);
+  const [floats, setFloats] = useState<FloatSummary[]>([]);
+  const [selectedWmo, setSelectedWmo] = useState<string>('');
+  const [selectedCycle, setSelectedCycle] = useState<number>(0);
   const [variableMode, setVariableMode] = useState<'temperature' | 'salinity' | 'both'>('both');
 
   const [forecast, setForecast] = useState<ForecastResult | null>(null);
@@ -31,8 +31,13 @@ export default function App() {
       .then((data) => {
         setFloats(data);
         if (data.length > 0) {
-          setSelectedWmo(data[0].wmo_id);
-          setSelectedCycle(data[0].defaultCycle || data[0].cycles[data[0].cycles.length - 2]);
+          // Start on a float with a long record that is still reporting, so the default
+          // forecast falls in the held-out period (2019 onwards) of the served model.
+          const candidates = data.filter((f) => f.cycles.length >= 30);
+          const pool = candidates.length ? candidates : data;
+          const start = [...pool].sort((a, b) => (b.lastDate ?? '').localeCompare(a.lastDate ?? ''))[0];
+          setSelectedWmo(start.wmo_id);
+          setSelectedCycle(start.defaultCycle || start.cycles[start.cycles.length - 2]);
         }
       })
       .catch((err) => {

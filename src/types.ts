@@ -116,9 +116,19 @@ export interface ForecastResult {
     salinity_forecast: number;
     persistence_temperature: number;
     persistence_salinity: number;
-    gradient_boosting_temperature: number;
-    gradient_boosting_salinity: number;
+    ridge_temperature: number;
+    ridge_salinity: number;
+    observed_temperature: number | null;
+    observed_salinity: number | null;
   }[];
+  has_observation?: boolean;
+  model_version?: string;
+  input_window?: {
+    dates: string[];
+    target_date: string | null;
+    gaps_days: number[];
+    within_training_gap_range: boolean;
+  };
   uncertainty_bounds: UncertaintyBound[];
   physical_diagnostics: PhysicalDiagnostics;
   xai_attribution: XAIAttribution;
@@ -129,6 +139,7 @@ export interface ForecastResult {
     profile_mae: number;
     thermocline_rmse: number;
     deep_rmse: number;
+    salinity_rmse?: number;
     physical_violation_rate: number;
   }[];
 }
@@ -142,4 +153,148 @@ export interface ChatMessage {
   grounding_verified?: boolean;
   cited_floats?: string[];
   suggested_queries?: string[];
+}
+
+// ---------------------------------------------------------------------------
+// Benchmark study (GET /api/benchmark)
+// ---------------------------------------------------------------------------
+export interface BenchmarkModel {
+  name: string;
+  short: string;
+  family: string;
+  description: string;
+  color: string;
+  proposed: boolean;
+}
+
+export interface BenchmarkRow {
+  temp_rmse: number;
+  temp_rmse_ci: [number, number];
+  sal_rmse: number;
+  temp_mae: number;
+  sal_mae: number;
+  therm_rmse: number;
+  deep_rmse: number;
+  temp_r2: number;
+  temp_bias: number;
+  acc_T: number;
+  p95_abs_error_T: number;
+  skill_vs_persistence: number;
+  skill_vs_climatology: number;
+  inv_any_pct: number;
+  inv_001_pct: number;
+  inv_003_pct: number;
+  mld_rmse: number;
+  mld_bias: number;
+  d20_rmse: number;
+  ohc_rmse: number;
+  crps_point_T: number;
+  direction_acc_T: number | null;
+  direction_f1_T: number | null;
+  n_params: number;
+  fit_seconds: number | null;
+  seed_temp_rmse_mean: number | null;
+  seed_temp_rmse_std: number | null;
+  seed_inv_003_mean: number | null;
+  seed_inv_003_std: number | null;
+  seed_inv_any_mean: number | null;
+  seed_inv_any_std: number | null;
+  seed_mld_rmse_mean: number | null;
+  diff_vs_floatchat_ci: [number, number] | null;
+}
+
+export interface BenchmarkUQ {
+  coverage95_raw: number;
+  coverage95_cal: number;
+  coverage90_raw: number;
+  coverage90_cal: number;
+  scale_k: number;
+  width95_cal: number;
+  crps_raw: number;
+  crps_cal: number;
+  spread_skill_ratio: number;
+  reliability_raw: number[];
+  reliability_cal: number[];
+}
+
+export interface BenchmarkSplit {
+  label: string;
+  description: string;
+  n_windows: { train: number; val: number; test: number };
+  n_floats: { train: number; val: number; test: number };
+  rows: Record<string, BenchmarkRow>;
+  per_depth_temp_rmse: Record<string, number[]>;
+  per_depth_sal_rmse: Record<string, number[]>;
+  season_temp_rmse: Record<string, Record<string, number>>;
+  season_counts: Record<string, number> | null;
+  uq: Record<string, BenchmarkUQ>;
+  reliability_nominal: number[];
+  observed: { inv_any_pct: number; inv_001_pct: number; inv_003_pct: number; mld_mean_m: number };
+  seeds: number[] | null;
+}
+
+export interface MldVariantResult {
+  mld_rmse: number;
+  mld_rmse_std: number | null;
+  mld_bias: number;
+  temp_rmse: number;
+  inv_003_pct: number;
+  pct_mixed_5_20: number;
+}
+
+export interface MldVariant {
+  id: string;
+  label: string;
+  lam_stab?: number;
+  tol?: number;
+  lam_surf?: number;
+  chronological?: MldVariantResult;
+  unseen_floats?: MldVariantResult;
+}
+
+export interface XaiMethodResult {
+  faithfulness: number;
+  repeatability: number;
+  robustness: number;
+  completeness_error: number;
+  runtime_ms: number;
+  share_latest_cycle: number;
+  temporal_weights: number[];
+  deletion_auc: number;
+}
+
+export interface BenchmarkResults {
+  generated: string;
+  proposed_model: string;
+  depths_dbar: number[];
+  dataset: { n_profiles: number; n_floats: number; date_range: string[]; region: string; levels: string; task: string };
+  models: BenchmarkModel[];
+  splits: Record<'chronological' | 'unseen_floats', BenchmarkSplit>;
+  mld_fix: {
+    variants: MldVariant[];
+    observed_pct_mixed_5_20: Record<string, number>;
+    selected_on_validation: Record<string, string>;
+    seeds: number[] | null;
+  } | null;
+  xai: {
+    target: string;
+    n_windows: number;
+    split: string;
+    methods: Record<string, XaiMethodResult>;
+    depth_matrix_similarity: Record<string, number>;
+  } | null;
+  summary: Record<string, number>;
+}
+
+export interface ModelInfo {
+  model_name: string;
+  model_version: string;
+  architecture: string;
+  split: string;
+  test_target_dates: string[];
+  test_rmse_temp: number;
+  test_rmse_sal: number;
+  test_rmse_temp_persistence: number;
+  test_rmse_temp_ridge: number;
+  [key: string]: unknown;
 }

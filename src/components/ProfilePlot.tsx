@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
-import { ForecastResult, ArgoProfile } from '../types.ts';
+import React, { useEffect, useState } from 'react';
+import { ForecastResult, ArgoProfile, ModelInfo } from '../types.ts';
+import { apiService } from '../services/api.ts';
 import { Info, Eye, EyeOff, Layers, Activity, Thermometer, Droplets, Crosshair, TrendingUp, TrendingDown, ArrowDown } from 'lucide-react';
 import { EvidenceLinkViewer } from './EvidenceLinkViewer.tsx';
 
@@ -36,7 +37,13 @@ export const ProfilePlot: React.FC<ProfilePlotProps> = ({
   const [showCi90, setShowCi90] = useState(true);
   const [showHistorical, setShowHistorical] = useState(true);
   const [showPersistence, setShowPersistence] = useState(true);
-  const [showGradBoost, setShowGradBoost] = useState(false);
+  const [showRidge, setShowRidge] = useState(false);
+  const [showObserved, setShowObserved] = useState(true);
+  const [modelInfo, setModelInfo] = useState<ModelInfo | null>(null);
+
+  useEffect(() => {
+    apiService.getModelInfo().then(setModelInfo).catch(() => setModelInfo(null));
+  }, []);
   const [hoverDepth, setHoverDepth] = useState<number | null>(null);
   const [chartType, setChartType] = useState<'profile' | 'ts_diagram'>('profile');
 
@@ -125,9 +132,18 @@ export const ProfilePlot: React.FC<ProfilePlotProps> = ({
       })
       .join(' ');
 
-    const gbPath = forecast.profiles
+    const observedPath = forecast.has_observation
+      ? forecast.profiles
+          .map((p, idx) => {
+            const v = isTemp ? p.observed_temperature : p.observed_salinity;
+            return `${idx === 0 ? 'M' : 'L'} ${scaleX(v ?? 0)} ${depthToY(p.depth_dbar)}`;
+          })
+          .join(' ')
+      : '';
+
+    const ridgePath = forecast.profiles
       .map((p, idx) => {
-        const x = scaleX(isTemp ? p.gradient_boosting_temperature : p.gradient_boosting_salinity);
+        const x = scaleX(isTemp ? p.ridge_temperature : p.ridge_salinity);
         const y = depthToY(p.depth_dbar);
         return `${idx === 0 ? 'M' : 'L'} ${x} ${y}`;
       })
@@ -307,10 +323,21 @@ export const ProfilePlot: React.FC<ProfilePlotProps> = ({
               />
             )}
 
-            {/* Gradient Boosting Baseline */}
-            {showGradBoost && (
+            {/* Observed target profile (when the forecast cycle is already in the archive) */}
+            {showObserved && observedPath && (
               <path
-                d={gbPath}
+                d={observedPath}
+                fill="none"
+                stroke="#059669"
+                strokeWidth={2}
+                strokeDasharray="6 3"
+              />
+            )}
+
+            {/* Ridge regression baseline */}
+            {showRidge && (
+              <path
+                d={ridgePath}
                 fill="none"
                 stroke="#d97706"
                 strokeWidth={1.8}
@@ -610,13 +637,23 @@ export const ProfilePlot: React.FC<ProfilePlotProps> = ({
               <span>Persistence Baseline</span>
             </button>
             <button
-              onClick={() => setShowGradBoost(!showGradBoost)}
+              onClick={() => setShowRidge(!showRidge)}
               className={`flex items-center gap-1 px-2.5 py-1 rounded-md border font-medium transition-colors ${
-                showGradBoost ? 'bg-indigo-50 border-indigo-200 text-indigo-700' : 'bg-slate-50 border-slate-200 text-slate-500'
+                showRidge ? 'bg-indigo-50 border-indigo-200 text-indigo-700' : 'bg-slate-50 border-slate-200 text-slate-500'
               }`}
             >
-              <span>GradBoost Baseline</span>
+              <span>Ridge Baseline</span>
             </button>
+            {forecast.has_observation && (
+              <button
+                onClick={() => setShowObserved(!showObserved)}
+                className={`flex items-center gap-1 px-2.5 py-1 rounded-md border font-medium transition-colors ${
+                  showObserved ? 'bg-emerald-50 border-emerald-200 text-emerald-700' : 'bg-slate-50 border-slate-200 text-slate-500'
+                }`}
+              >
+                <span>Observed Cycle {forecast.predicted_cycle}</span>
+              </button>
+            )}
           </div>
         )}
       </div>
@@ -801,14 +838,31 @@ export const ProfilePlot: React.FC<ProfilePlotProps> = ({
         <div className="flex items-center gap-2">
           <Info className="w-4 h-4 text-cyan-400 shrink-0" />
           <span>
-            Target Profile: <strong>Cycle {forecast.predicted_cycle}</strong> forecasted from sequence [Cycles {forecast.input_sequence_cycles.join(', ')}].
-            Evaluation RMSE: <strong className="text-emerald-400">0.576°C</strong>, persistence 0.633°C (9.0% lower). Across 10 random splits the RMSE difference is not significant (see paper Table 4)..
+            Target Profile: <strong>Cycle {forecast.predicted_cycle}</strong> forecast from cycles [{forecast.input_sequence_cycles.join(', ')}]
+            {forecast.has_observation ? ' (observed profile available for comparison).' : ' (not observed yet: true look-ahead forecast).'}
+            {forecast.input_window && !forecast.input_window.within_training_gap_range && (
+              <span className="text-amber-300"> Profile spacing ({forecast.input_window.gaps_days.join(', ')} days) is outside the 3-20 day range seen in training; treat this forecast with care.</span>
+            )}
+            {modelInfo && (
+              <>
+                {' '}Held-out test ({modelInfo.test_target_dates?.[0]?.slice(0, 4)}-{modelInfo.test_target_dates?.[1]?.slice(0, 4)}): temperature RMSE{' '}
+                <strong className="text-emerald-400">{modelInfo.test_rmse_temp.toFixed(3)}°C</strong> vs persistence{' '}
+                {modelInfo.test_rmse_temp_persistence.toFixed(3)}°C (
+                {(((modelInfo.test_rmse_temp_persistence - modelInfo.test_rmse_temp) / modelInfo.test_rmse_temp_persistence) * 100).toFixed(1)}% lower).
+              </>
+            )}
           </span>
         </div>
         <div className="flex items-center gap-2">
-          <span className="px-2 py-0.5 rounded bg-emerald-950 text-emerald-300 border border-emerald-800 font-mono text-[11px]">
-            Static Stability: PASS
-          </span>
+          {forecast.physical_diagnostics.is_gravitationally_stable ? (
+            <span className="px-2 py-0.5 rounded bg-emerald-950 text-emerald-300 border border-emerald-800 font-mono text-[11px]">
+              Static Stability: PASS
+            </span>
+          ) : (
+            <span className="px-2 py-0.5 rounded bg-amber-950 text-amber-300 border border-amber-800 font-mono text-[11px]">
+              Static Stability: {forecast.physical_diagnostics.stability_violation_count} inversion(s)
+            </span>
+          )}
           <span className="px-2 py-0.5 rounded bg-cyan-950 text-cyan-300 border border-cyan-800 font-mono text-[11px]">
             QC: Flag 1/2
           </span>

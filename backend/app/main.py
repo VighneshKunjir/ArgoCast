@@ -13,7 +13,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.routing import APIRoute
 
-from app.api import health, floats, forecast, chat
+from app.api import health, floats, forecast, chat, benchmark
 from app.db.session import init_db
 from app.api.forecast import load_model_and_preprocessor
 
@@ -22,7 +22,7 @@ def create_app() -> FastAPI:
     """Create and configure the FastAPI application."""
     app = FastAPI(
         title="FloatChat X-RAG Forecasting Engine",
-        version="1.2.0-IEEE-Access-Spec",
+        version="2.0.0",
         description="Explainable Evidence-Linked Argo Ocean Profile Forecasting & Physics Validation Engine",
     )
 
@@ -58,6 +58,7 @@ def create_app() -> FastAPI:
     include_router_with_prefix(floats.router, "/api")
     include_router_with_prefix(forecast.router, "/api")
     include_router_with_prefix(chat.router, "/api")
+    include_router_with_prefix(benchmark.router, "/api")
 
     @app.on_event("startup")
     async def startup():
@@ -69,13 +70,24 @@ def create_app() -> FastAPI:
             print("WARNING: Failed to load ML model and preprocessor")
         else:
             print("ML model and preprocessor loaded successfully")
+        # Build the evidence-link search index once so the first forecast is not slow.
+        try:
+            from app.core.evidence import _candidate_index
+            from app.db.session import SessionLocal
+            db = SessionLocal()
+            try:
+                _candidate_index(db)
+            finally:
+                db.close()
+        except Exception as exc:  # empty or missing database: index is built on first use
+            print(f"Evidence index not built at startup: {exc}")
 
     @app.get("/")
     async def root():
         """Root endpoint."""
         return {
             "message": "FloatChat X-RAG Forecasting Engine",
-            "version": "1.2.0-IEEE-Access-Spec",
+            "version": "2.0.0",
             "docs": "/docs",
         }
 

@@ -17,5 +17,5 @@ async def health_check():
         status="ok",
         service="FloatChat-XRAG-Forecasting-Engine",
         region="Arabian Sea / Northern Indian Ocean",
-        version="1.2.0-IEEE-Access-Spec"
+        version="2.0.0"
     )

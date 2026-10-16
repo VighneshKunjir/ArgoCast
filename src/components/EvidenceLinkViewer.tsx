@@ -66,7 +66,7 @@ export const EvidenceLinkViewer: React.FC<EvidenceLinkViewerProps> = ({ forecast
               Forecast Evidence Link
             </div>
             <p className="text-cyan-800 text-[11px] leading-relaxed">
-              Explicit cryptographic citations bound to predicted cycle {forecast.predicted_cycle} with provenance hash.
+              Citations of real QC-pass profiles that best match the forecast for cycle {forecast.predicted_cycle}, with their GDAC file paths.
             </p>
           </div>
         </div>

@@ -21,6 +21,8 @@ class FloatSummary(BaseModel):
     baseLon: float
     cycles: List[int]
     defaultCycle: int
+    firstDate: Optional[str] = None
+    lastDate: Optional[str] = None
 
 
 class ArgoMeasurement(BaseModel):
@@ -63,8 +65,10 @@ class ProfileData(BaseModel):
     salinity_forecast: float
     persistence_temperature: float
     persistence_salinity: float
-    gradient_boosting_temperature: float
-    gradient_boosting_salinity: float
+    ridge_temperature: float
+    ridge_salinity: float
+    observed_temperature: Optional[float] = None
+    observed_salinity: Optional[float] = None
 
 
 class UncertaintyBound(BaseModel):
@@ -154,6 +158,7 @@ class MetricsComparison(BaseModel):
     profile_mae: float
     thermocline_rmse: float
     deep_rmse: float
+    salinity_rmse: Optional[float] = None
     physical_violation_rate: float
 
 
