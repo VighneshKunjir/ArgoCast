@@ -1,10 +1,10 @@
 {
-  "model_name": "FloatChat PI-BiLSTM",
+  "model_name": "ArgoCast PI-BiLSTM",
   "model_version": "v2.0.0-pibilstm-arabian2000",
   "architecture": "2-layer bidirectional LSTM, 128 units per direction, dropout 0.2, separate T and S heads",
   "loss": "MSE(T) + 2.5 MSE(S) + 10 stability hinge (TEOS-10 consistent) + 1.5 thermocline gradient",
   "export_date": "2026-10-16",
-  "checkpoint": "FloatChat_PI-BiLSTM_seed42.pt",
+  "checkpoint": "PI-BiLSTM, chronological split, seed 42",
   "dataset": "Arabian Sea (10-25N, 50-75E) Argo profiles 2000-2026, 16 levels 5-1000 dbar",
   "split": "chronological",
   "n_windows": {

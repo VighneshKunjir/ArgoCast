@@ -8,7 +8,7 @@ from pydantic import BaseModel, Field
 class HealthResponse(BaseModel):
     """Health check response."""
     status: str = "ok"
-    service: str = "FloatChat-Forecasting-API"
+    service: str = "ArgoCast-Forecasting-API"
     region: str = "Arabian Sea / Northern Indian Ocean"
     version: str = "2.0.0"
 

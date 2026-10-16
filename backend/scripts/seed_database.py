@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-"""Load the Arabian Sea 2000-2026 Argo dataset into the FloatChat database.
+"""Load the Arabian Sea 2000-2026 Argo dataset into the ArgoCast database.
 
 Source: backend/data/processed/argo_arabian_2000_2026.csv.gz
   one row per quality-controlled profile (321 floats, 36,164 profiles), already

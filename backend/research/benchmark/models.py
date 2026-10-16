@@ -1,6 +1,6 @@
-"""Comparison forecasters for the FloatChat 10-model benchmark.
+"""Comparison forecasters for the ArgoCast 10-model benchmark.
 
-Every neural model here solves exactly the FloatChat task:
+Every neural model here solves exactly the ArgoCast task:
     input  x : (batch, 3, 32)  three past cycles, each [16 T levels, 16 S levels], standardised
     output   : (T_hat, S_hat), each (batch, 16), standardised next-cycle profile
 
@@ -25,7 +25,7 @@ SEQ_LEN = 3
 
 
 class _DualHead(nn.Module):
-    """Two linear heads (temperature, salinity), as in the FloatChat model."""
+    """Two linear heads (temperature, salinity), as in the ArgoCast model."""
 
     def __init__(self, d_in: int):
         super().__init__()
@@ -40,7 +40,7 @@ class _DualHead(nn.Module):
 class GRUForecaster(nn.Module):
     """2-layer unidirectional GRU, 128 units, dropout 0.2, dual heads.
 
-    Direct ablation of the FloatChat PI-BiLSTM: same depth, width, dropout and
+    Direct ablation of the ArgoCast PI-BiLSTM: same depth, width, dropout and
     heads, but GRU gating and a single (forward) direction.
     """
 
@@ -307,7 +307,7 @@ def build(name: str) -> nn.Module:
         "N-HiTS": NHiTS,
         "TFT": TemporalFusionTransformer,
         "Bi-LSTM (no physics loss)": PhysicsInformedBiLSTM,
-        "FloatChat PI-BiLSTM": PhysicsInformedBiLSTM,
+        "ArgoCast PI-BiLSTM": PhysicsInformedBiLSTM,
     }
     return table[name]()
 

@@ -1,5 +1,5 @@
 /**
- * FloatChat web server.
+ * ArgoCast web server.
  *
  * - Forwards every /api/* request to the Python FastAPI backend (default http://localhost:8000).
  * - In development, serves the React app through Vite middleware (hot reload).
@@ -35,7 +35,7 @@ async function startServer() {
                 error: {
                   code: 'BACKEND_UNAVAILABLE',
                   message:
-                    `The FloatChat backend at ${PYTHON_BACKEND_URL} is not running. ` +
+                    `The ArgoCast backend at ${PYTHON_BACKEND_URL} is not running. ` +
                     "Start it with: cd backend && uvicorn app.main:app --port 8000",
                   details: err.message,
                 },
@@ -57,7 +57,7 @@ async function startServer() {
   }
 
   app.listen(PORT, '0.0.0.0', () => {
-    console.log(`FloatChat running at http://localhost:${PORT} (API -> ${PYTHON_BACKEND_URL})`);
+    console.log(`ArgoCast running at http://localhost:${PORT} (API -> ${PYTHON_BACKEND_URL})`);
   });
 }
 

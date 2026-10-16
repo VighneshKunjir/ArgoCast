@@ -8,7 +8,7 @@ from app.models.schema import Base
 # Database file is in backend/data/ relative to the backend directory
 # session.py is at backend/app/db/session.py, so 3 dirnames to get to backend/
 BACKEND_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-DEFAULT_DB_PATH = os.path.join(BACKEND_DIR, "data", "floatchat.db")
+DEFAULT_DB_PATH = os.path.join(BACKEND_DIR, "data", "argocast.db")
 
 DATABASE_URL = os.getenv("DATABASE_URL")
 if not DATABASE_URL:

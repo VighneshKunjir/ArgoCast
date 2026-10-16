@@ -15,7 +15,7 @@ async def health_check():
     """
     return HealthResponse(
         status="ok",
-        service="FloatChat-Forecasting-API",
+        service="ArgoCast-Forecasting-API",
         region="Arabian Sea / Northern Indian Ocean",
         version="2.0.0"
     )

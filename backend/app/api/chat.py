@@ -352,7 +352,7 @@ def _answer_benchmarks(ctx: Dict[str, Any]) -> str:
         return ("Benchmark results are not available in this installation "
                 "(app/ml/artifacts/benchmark_results.json is missing).")
     return (
-        f"FloatChat PI-BiLSTM was compared with {b['n_baselines']} baselines on Arabian Sea Argo "
+        f"ArgoCast PI-BiLSTM was compared with {b['n_baselines']} baselines on Arabian Sea Argo "
         f"profiles ({b['n_profiles']:,} profiles, {b['n_floats']} floats, 2001-2026), on two test sets: "
         f"future years 2019-2026 ({b['n_test_chrono']:,} forecasts) and {b['n_unseen_floats']} floats never "
         f"seen in training ({b['n_test_unseen']:,} forecasts).\n"
@@ -416,7 +416,7 @@ def _try_gemini_response(query: str, wmo_id: str, cycle: int, offline_text: str)
         api_key = os.environ.get("GEMINI_API_KEY")
 
     if not api_key:
-        print("[FloatChat Gemini] GEMINI_API_KEY not found in environment. Using analytical engine fallback.")
+        print("[ArgoCast Gemini] GEMINI_API_KEY not found in environment. Using analytical engine fallback.")
         return None
 
     try:
@@ -424,7 +424,7 @@ def _try_gemini_response(query: str, wmo_id: str, cycle: int, offline_text: str)
 
         client = genai.Client(api_key=api_key)
         prompt = (
-            "You are FloatChat, an expert AI oceanographic assistant specialized in the Arabian Sea and Indian Ocean. "
+            "You are ArgoCast, an expert AI oceanographic assistant specialized in the Arabian Sea and Indian Ocean. "
             "Answer the user query accurately, conversationally, and concisely, strictly grounded in the verified Argo profile context below.\n\n"
             f"Float WMO ID: {wmo_id}\n"
             f"Cycle Number: {cycle}\n\n"
@@ -457,16 +457,16 @@ def _try_gemini_response(query: str, wmo_id: str, cycle: int, offline_text: str)
                 )
                 text = getattr(response, "text", None)
                 if text and text.strip():
-                    print(f"[FloatChat Gemini] Response generated successfully using model: {model_name}")
+                    print(f"[ArgoCast Gemini] Response generated successfully using model: {model_name}")
                     return text.strip()
             except Exception as model_err:
-                print(f"[FloatChat Gemini] Model '{model_name}' attempt failed: {model_err}")
+                print(f"[ArgoCast Gemini] Model '{model_name}' attempt failed: {model_err}")
                 continue
 
-        print("[FloatChat Gemini] All candidate models failed. Falling back to analytical engine.")
+        print("[ArgoCast Gemini] All candidate models failed. Falling back to analytical engine.")
         return None
     except Exception as e:
-        print(f"[FloatChat Gemini] Unexpected exception during Gemini generation: {e}")
+        print(f"[ArgoCast Gemini] Unexpected exception during Gemini generation: {e}")
         return None
 
 

@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-"""Stage 5 - compare three explanation methods on the trained FloatChat model.
+"""Stage 5 - compare three explanation methods on the trained ArgoCast model.
 
 Methods (all explain one scalar output, e.g. temperature at 100 dbar, with
 respect to the 96 inputs = 3 cycles x (16 T + 16 S levels), in scaled units)
@@ -8,7 +8,7 @@ respect to the 96 inputs = 3 cycles x (16 T + 16 S levels), in scaled units)
                 so that all three methods give additive attributions.
   SHAP          KernelSHAP (model-agnostic Shapley estimate) with a k-means
                 background of 25 training windows.
-  FloatChat IG  the project's method: Integrated Gradients through the
+  ArgoCast IG  the project's method: Integrated Gradients through the
                 SingleOutputModelWrapper, climatological (all-zero scaled)
                 baseline, 64 path steps, plus temporal weights and the
                 16x16 depth-attribution matrix.
@@ -52,7 +52,7 @@ from common import (MODEL_DIR, N_LEV, PALETTE, PROCESSED_DIR, STANDARD_DEPTHS,
 from app.ml.model import PhysicsInformedBiLSTM, SingleOutputModelWrapper
 
 warnings.filterwarnings("ignore")
-METHODS = ["LIME", "SHAP", "FloatChat IG"]
+METHODS = ["LIME", "SHAP", "ArgoCast IG"]
 FEAT_NAMES = [f"{c}_{v}{int(d)}" for c in ("t-3", "t-2", "t-1") for v in ("T", "S") for d in STANDARD_DEPTHS]
 NF = 96
 
@@ -86,7 +86,7 @@ class Target:
 
 # ------------------------------------------------------------- explainers
 class IGExplainer:
-    name = "FloatChat IG"
+    name = "ArgoCast IG"
 
     def __init__(self, target, steps):
         from captum.attr import IntegratedGradients
@@ -199,7 +199,7 @@ def plausibility(a, var, d):
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--split", default="chronological", choices=["chronological", "unseen_floats"])
-    ap.add_argument("--seed-model", type=int, default=42, help="which trained FloatChat seed to explain")
+    ap.add_argument("--seed-model", type=int, default=42, help="which trained ArgoCast seed to explain")
     ap.add_argument("--n", type=int, default=100, help="test windows to explain (season-stratified)")
     ap.add_argument("--stab-n", type=int, default=30, help="windows used for robustness/repeatability")
     ap.add_argument("--matrix-n", type=int, default=20, help="windows used for the 16x16 depth matrices")
@@ -219,7 +219,7 @@ def main():
     sp = np.load(PROCESSED_DIR / f"split_{args.split}.npz")
     sc = joblib.load(MODEL_DIR / f"scalers_{args.split}.joblib")
     model = PhysicsInformedBiLSTM()
-    model.load_state_dict(torch.load(MODEL_DIR / f"floatchat_{args.split}_seed{args.seed_model}.pt", map_location="cpu"))
+    model.load_state_dict(torch.load(MODEL_DIR / f"argocast_{args.split}_seed{args.seed_model}.pt", map_location="cpu"))
     model.eval()
 
     test_ix = sp["test"]
@@ -243,14 +243,14 @@ def main():
         print(f"\n--- target: {t.label}")
         exps = {"LIME": LIMEExplainer(t, bg, args.lime_samples, args.seed),
                 "SHAP": SHAPExplainer(t, bg, args.shap_nsamples),
-                "FloatChat IG": IGExplainer(t, args.ig_steps)}
+                "ArgoCast IG": IGExplainer(t, args.ig_steps)}
         A, R, times = {}, {}, {}
         for mname, ex in exps.items():
             t0 = time.time(); calls0 = t.n_calls
             A[mname] = np.array([ex.explain(x) for x in Xe])
             times[mname] = (time.time() - t0) / len(Xe)
             R[mname] = np.array([ex.reference(x) for x in Xe])
-            calls = "IG path" if mname == "FloatChat IG" else f"{(t.n_calls - calls0) / len(Xe):,.0f} model calls"
+            calls = "IG path" if mname == "ArgoCast IG" else f"{(t.n_calls - calls0) / len(Xe):,.0f} model calls"
             print(f"  {mname:13s} {times[mname]*1000:8.1f} ms / explanation ({calls})")
         fx = t.f(Xe)
         res = {}
@@ -301,8 +301,8 @@ def main():
                 rep.append(cos(a0, ex.explain(x)))
             res[mname]["robustness_cos"] = float(np.nanmean(rob))
             res[mname]["repeatability_cos"] = float(np.nanmean(rep))
-        res["FloatChat IG"]["ig_convergence_delta_median"] = float(np.median(exps["FloatChat IG"].deltas))
-        res["FloatChat IG"]["ig_convergence_delta_max"] = float(np.max(exps["FloatChat IG"].deltas))
+        res["ArgoCast IG"]["ig_convergence_delta_median"] = float(np.median(exps["ArgoCast IG"].deltas))
+        res["ArgoCast IG"]["ig_convergence_delta_max"] = float(np.max(exps["ArgoCast IG"].deltas))
 
         # agreement
         agree = {}
@@ -323,7 +323,7 @@ def main():
                 tj = Target(model, var, jd, device)
                 ex = {"LIME": lambda: LIMEExplainer(tj, bg, args.lime_samples, args.seed),
                       "SHAP": lambda: SHAPExplainer(tj, bg, max(300, args.shap_nsamples // 2)),
-                      "FloatChat IG": lambda: IGExplainer(tj, args.ig_steps)}[mname]()
+                      "ArgoCast IG": lambda: IGExplainer(tj, args.ig_steps)}[mname]()
                 vi = 0 if var == "temp" else 1
                 acc = np.zeros(N_LEV)
                 for x in Xm:
@@ -398,7 +398,7 @@ def figures(store, report, w, sc):
         x = STEPS / NF * 100
         for m in METHODS + ["Random"]:
             dcur, icur = s["curves"][m]
-            st = dict(color=PALETTE[m], ls="--" if m == "Random" else "-", lw=2 if m == "FloatChat IG" else 1.2)
+            st = dict(color=PALETTE[m], ls="--" if m == "Random" else "-", lw=2 if m == "ArgoCast IG" else 1.2)
             axes[0].plot(x, dcur, label=f"{m} (AUC {auc(dcur):.3f})", **st)
             axes[1].plot(x, icur, label=f"{m} (AUC {auc(icur):.3f})", **st)
         axes[0].set_title("Deletion: higher and earlier is better", fontsize=9)
@@ -466,7 +466,7 @@ def figures(store, report, w, sc):
         ax.set_xticks(range(len(keys))); ax.set_xticklabels([store[t]["label"].replace(" at ", "\n") for t in keys], fontsize=7)
         ax.set_title(lab, fontsize=8)
     axes[0, 0].legend(fontsize=6)
-    fig.suptitle("Explanation quality - LIME vs SHAP vs FloatChat IG", fontsize=10)
+    fig.suptitle("Explanation quality - LIME vs SHAP vs ArgoCast IG", fontsize=10)
     fig.tight_layout()
     savefig(fig, "fig_xai_metric_summary")
 

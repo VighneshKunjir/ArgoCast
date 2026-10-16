@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 """Stage 3 - build forecasting windows and the train / validation / test splits.
 
-Window definition (same task as FloatChat): 3 consecutive profiles of a float
+Window definition (same task as ArgoCast): 3 consecutive profiles of a float
 (t-3, t-2, t-1) -> the next profile t. A window is only valid when every step
 between consecutive profiles is between --min-gap and --max-gap days (default
 3-20 days). This guarantees each window really is a ~10-day-ahead forecast and

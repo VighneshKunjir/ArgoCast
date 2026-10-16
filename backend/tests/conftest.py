@@ -1,6 +1,6 @@
 """Test setup: a small throw-away SQLite database seeded from the shipped dataset.
 
-The tests never touch backend/data/floatchat.db. Set FLOATCHAT_TEST_USE_MAIN_DB=1 to
+The tests never touch backend/data/argocast.db. Set ARGOCAST_TEST_USE_MAIN_DB=1 to
 run them against the main database instead.
 """
 import os
@@ -13,8 +13,8 @@ BACKEND_DIR = Path(__file__).resolve().parent.parent
 if str(BACKEND_DIR) not in sys.path:
     sys.path.insert(0, str(BACKEND_DIR))
 
-if not os.environ.get("FLOATCHAT_TEST_USE_MAIN_DB"):
-    _db = Path(tempfile.mkdtemp(prefix="floatchat_test_")) / "test.db"
+if not os.environ.get("ARGOCAST_TEST_USE_MAIN_DB"):
+    _db = Path(tempfile.mkdtemp(prefix="argocast_test_")) / "test.db"
     os.environ["DATABASE_URL"] = f"sqlite:///{_db.as_posix()}"
     subprocess.run(
         [sys.executable, str(BACKEND_DIR / "scripts" / "seed_database.py"), "--floats", "6"],

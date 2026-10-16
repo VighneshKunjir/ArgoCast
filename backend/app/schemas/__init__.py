@@ -1,4 +1,4 @@
-"""Pydantic schemas for FloatChat API."""
+"""Pydantic schemas for ArgoCast API."""
 
 from .forecast import *
 from .chat import *

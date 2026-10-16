@@ -1,5 +1,5 @@
 {
-  "name": "floatchat",
+  "name": "argocast",
   "private": true,
   "version": "2.0.0",
   "description": "Physics-informed, explainable forecasting of Argo temperature and salinity profiles",

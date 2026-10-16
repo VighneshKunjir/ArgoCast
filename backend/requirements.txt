@@ -1,4 +1,4 @@
-# FloatChat backend (API, model inference, database)
+# ArgoCast backend (API, model inference, database)
 fastapi>=0.110
 uvicorn[standard]>=0.28
 pydantic>=2.6

@@ -1,6 +1,6 @@
 """Shared configuration and helpers for the Arabian Sea 2000-2026 experiment.
 
-Everything in this folder is self-contained except the FloatChat model and
+Everything in this folder is self-contained except the ArgoCast model and
 loss, which are imported from backend/app/ml so the experiment trains the
 exact architecture used by the application.
 """
@@ -84,7 +84,7 @@ def set_seed(seed: int) -> None:
 
 
 def sigma_poly(t: np.ndarray, s: np.ndarray) -> np.ndarray:
-    """Polynomial potential density used by the FloatChat loss (physical units)."""
+    """Polynomial potential density used by the ArgoCast loss (physical units)."""
     return 28.14 - 0.0735 * t - 0.00469 * t ** 2 + 0.802 * (s - 35.0)
 
 
@@ -182,11 +182,11 @@ PALETTE = {
     "Ridge": "#E69F00",
     "Gradient Boosting": "#56B4E9",
     "Bi-LSTM (MSE only)": "#009E73",
-    "FloatChat Bi-LSTM": "#0072B2",
+    "ArgoCast Bi-LSTM": "#0072B2",
     "Observed": "#000000",
     "LIME": "#E69F00",
     "SHAP": "#009E73",
-    "FloatChat IG": "#0072B2",
+    "ArgoCast IG": "#0072B2",
     "Random": "#999999",
 }
 

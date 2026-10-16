@@ -1,1 +1,1 @@
-"""FloatChat backend test suite."""
+"""ArgoCast backend test suite."""

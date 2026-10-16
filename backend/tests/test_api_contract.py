@@ -22,7 +22,7 @@ def test_health_endpoint(client):
     assert res.status_code == 200
     data = res.json()
     assert data["status"] == "ok"
-    assert "FloatChat" in data["service"]
+    assert "ArgoCast" in data["service"]
 
 
 def test_floats_catalog_endpoint(client, sample_float):
@@ -60,7 +60,7 @@ def test_forecast_contract_schema(client, sample_float):
     assert len(data["uncertainty_bounds"]) == 16
     assert data["has_observation"] is True  # default base cycle is the second-to-last one
     assert [m["model"] for m in data["metrics_comparison"]] == [
-        "Persistence (t-1)", "Ridge regression", "FloatChat PI-BiLSTM"]
+        "Persistence (t-1)", "Ridge regression", "ArgoCast PI-BiLSTM"]
     assert all(p["ridge_temperature"] != 0 for p in data["profiles"])
     for b in data["uncertainty_bounds"]:
         assert b["ci95_temp_upper"] > b["mean_temp"] > b["ci95_temp_lower"]
@@ -101,7 +101,7 @@ def test_chat_endpoint_grounded(client, sample_float):
 
 def test_model_info_endpoint(client):
     meta = client.get("/api/model").json()
-    assert meta["model_name"] == "FloatChat PI-BiLSTM"
+    assert meta["model_name"] == "ArgoCast PI-BiLSTM"
     assert meta["test_rmse_temp"] < meta["test_rmse_temp_persistence"]
 
 
@@ -113,6 +113,6 @@ def test_benchmark_endpoint(client):
     for split in ("chronological", "unseen_floats"):
         rows = b["splits"][split]["rows"]
         assert set(rows) == {m["name"] for m in b["models"]}
-        fc = rows["FloatChat PI-BiLSTM"]
+        fc = rows["ArgoCast PI-BiLSTM"]
         assert fc["temp_rmse"] < rows["Persistence"]["temp_rmse"]
         assert fc["inv_003_pct"] < 0.1

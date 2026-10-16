@@ -25,7 +25,7 @@ import numpy as np
 
 BACKEND = Path(__file__).resolve().parents[1]
 DEPTHS = [5, 20, 50, 75, 100, 150, 200, 250, 300, 400, 500, 600, 700, 800, 900, 1000]
-PROPOSED = "FloatChat PI-BiLSTM"
+PROPOSED = "ArgoCast PI-BiLSTM"
 SPLITS = {
     "chronological": {"label": "Future years (2019-2026)",
                       "description": "Trained on profiles up to 2016, validated on 2017-2018, tested on 2019-2026."},
@@ -49,8 +49,8 @@ MODELS = [
     ("N-HiTS", "N-HiTS", "Deep learning", "Stacked MLP blocks working at different time resolutions."),
     ("TFT", "TFT", "Deep learning", "Temporal Fusion Transformer: attention plus input selection."),
     ("Bi-LSTM (no physics loss)", "Bi-LSTM (no physics)", "Deep learning",
-     "Same network as FloatChat, trained on error only (ablation)."),
-    (PROPOSED, "FloatChat PI-BiLSTM", "Deep learning + physics",
+     "Same network as ArgoCast, trained on error only (ablation)."),
+    (PROPOSED, "ArgoCast PI-BiLSTM", "Deep learning + physics",
      "2-layer bidirectional LSTM with a TEOS-10 density-stability penalty (proposed)."),
 ]
 COLORS = {
@@ -60,7 +60,7 @@ COLORS = {
     "Bi-LSTM (no physics loss)": "#009E73", PROPOSED: "#0072B2",
 }
 MLD_VARIANTS = [
-    ("baseline", "Current loss (FloatChat)"), ("tol_0.01", "Tolerance 0.01"), ("tol_0.03", "Tolerance 0.03"),
+    ("baseline", "Current loss (ArgoCast)"), ("tol_0.01", "Tolerance 0.01"), ("tol_0.03", "Tolerance 0.03"),
     ("weight_1", "Stability weight 1"), ("surface_match", "Surface term"),
     ("tol_0.01_surface", "Tolerance 0.01 + surface term"), ("tol_0.03_surface", "Tolerance 0.03 + surface term"),
     ("no_physics", "No physics loss"),
@@ -79,7 +79,9 @@ def r(x, d=4):
 
 
 def load(path: Path):
-    return json.loads(path.read_text(encoding="utf-8"))
+    # Result files written before the project was renamed use the old model name.
+    text = path.read_text(encoding="utf-8").replace("FloatChat", "ArgoCast").replace("floatchat", "argocast")
+    return json.loads(text)
 
 
 def split_block(out: Path, split: str) -> dict:
@@ -114,8 +116,8 @@ def split_block(out: Path, split: str) -> dict:
             "seed_inv_any_mean": r(st["inversion_rate_any_pct"]["mean"], 3) if st else None,
             "seed_inv_any_std": r(st["inversion_rate_any_pct"]["std"], 3) if st else None,
             "seed_mld_rmse_mean": r(st["mld_m_rmse"]["mean"], 2) if st else None,
-            "diff_vs_floatchat_ci": [r(v) for v in m["temp_rmse_diff_vs_floatchat_ci"]]
-            if "temp_rmse_diff_vs_floatchat_ci" in m else None,
+            "diff_vs_argocast_ci": [r(v) for v in m["temp_rmse_diff_vs_argocast_ci"]]
+            if "temp_rmse_diff_vs_argocast_ci" in m else None,
         }
         per_depth_T[name] = [r(v) for v in e["T"]["per_depth_rmse"]]
         per_depth_S[name] = [r(v) for v in e["S"]["per_depth_rmse"]]
@@ -184,7 +186,7 @@ def xai_block(path: Path):
     X = load(path)
     t = X["targets"]["temp_100"]
     methods = {}
-    for key, label in (("FloatChat IG", "Integrated Gradients"), ("LIME", "LIME"), ("SHAP", "KernelSHAP")):
+    for key, label in (("ArgoCast IG", "Integrated Gradients"), ("LIME", "LIME"), ("SHAP", "KernelSHAP")):
         m = t[key]
         methods[label] = {
             "faithfulness": r(m["faithfulness_corr"], 3), "repeatability": r(m["repeatability_cos"], 3),

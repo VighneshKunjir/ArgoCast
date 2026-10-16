@@ -1,10 +1,10 @@
-# FloatChat Extended Evaluation - Experiment Protocol (Arabian Sea, 2000-2026)
+# ArgoCast Extended Evaluation - Experiment Protocol (Arabian Sea, 2000-2026)
 
 Code: `backend/research/pipeline/` (run with `python run_all.py`). Results tables are written to `outputs/tables/`.
 
 ## 1. Objective
 
-The goal is to re-measure FloatChat forecast accuracy and physical consistency on the complete Arabian Sea Argo record. The previous run used 109 floats, 18,192 profiles, 5 test floats and 916 test windows. This run uses all floats in the box, under two leakage-safe splits. It also compares the FloatChat explanation method (Integrated Gradients) against LIME and SHAP using quantitative faithfulness, stability, cost and plausibility metrics.
+The goal is to re-measure ArgoCast forecast accuracy and physical consistency on the complete Arabian Sea Argo record. The previous run used 109 floats, 18,192 profiles, 5 test floats and 916 test windows. This run uses all floats in the box, under two leakage-safe splits. It also compares the ArgoCast explanation method (Integrated Gradients) against LIME and SHAP using quantitative faithfulness, stability, cost and plausibility metrics.
 
 ## 2. Data
 
@@ -66,8 +66,8 @@ Scalers (per-depth standardisation) are fitted on the training part only.
 | Climatology | Monthly mean training profile for the target month |
 | Ridge | Linear regression on 96 scaled inputs, alpha = 1 |
 | Gradient Boosting | HistGradientBoosting, one regressor per output (32), 200 iterations |
-| Bi-LSTM (MSE only) | FloatChat architecture; loss = MSE(T) + 2.5 MSE(S). Ablation without physics terms |
-| FloatChat Bi-LSTM | 2-layer Bi-LSTM, 128 units per direction, dropout 0.2, dual heads. Full loss with lambda_sal = 2.5, lambda_phys = 10, lambda_therm = 1.5 |
+| Bi-LSTM (MSE only) | ArgoCast architecture; loss = MSE(T) + 2.5 MSE(S). Ablation without physics terms |
+| ArgoCast Bi-LSTM | 2-layer Bi-LSTM, 128 units per direction, dropout 0.2, dual heads. Full loss with lambda_sal = 2.5, lambda_phys = 10, lambda_therm = 1.5 |
 
 Neural training:
 
@@ -93,7 +93,7 @@ All metrics are computed on the test set in physical units:
 Physical consistency:
 
 - Percentage of forecast profiles with any density inversion, using the exact TEOS-10 sigma0 (gsw).
-- The same percentage using the polynomial sigma from the FloatChat loss, for continuity with earlier numbers.
+- The same percentage using the polynomial sigma from the ArgoCast loss, for continuity with earlier numbers.
 - The observed test profiles are reported as a reference row.
 
 Statistics:
@@ -111,7 +111,7 @@ Uncertainty:
 
 ## 7. Explainability comparison
 
-- **Model and data.** FloatChat Bi-LSTM, chronological split, seed 42. 100 test windows, stratified by season.
+- **Model and data.** ArgoCast Bi-LSTM, chronological split, seed 42. 100 test windows, stratified by season.
 - **Targets.** Temperature at 100 dbar and salinity at 100 dbar.
 - **Attribution space.** All methods attribute in scaled input units (96 features).
 
@@ -119,7 +119,7 @@ Uncertainty:
 |---|---|
 | LIME | lime_tabular regression, 2000 perturbations, no discretisation. Coefficients converted to additive contributions w_i (x_i - mu_i) / s_i |
 | SHAP | KernelSHAP, 1000 coalitions, k-means background of 25 training windows |
-| FloatChat IG | Integrated Gradients via SingleOutputModelWrapper, climatological (zero scaled) baseline, 64 steps. Also produces temporal weights and the 16x16 depth matrix |
+| ArgoCast IG | Integrated Gradients via SingleOutputModelWrapper, climatological (zero scaled) baseline, 64 steps. Also produces temporal weights and the 16x16 depth matrix |
 
 | Metric | Meaning |
 |---|---|

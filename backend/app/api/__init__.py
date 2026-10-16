@@ -1,4 +1,4 @@
-"""FloatChat API package."""
+"""ArgoCast API package."""
 
 from . import health, floats, forecast, chat
 

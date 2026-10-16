@@ -1,4 +1,4 @@
-"""Extended evaluation metrics for the FloatChat 10-model benchmark.
+"""Extended evaluation metrics for the ArgoCast 10-model benchmark.
 
 Called by run_benchmark.py for every model and every seed, on the same test windows
 as the main table. Two separate result groups:
@@ -581,7 +581,7 @@ def report_cls(p, order):
         L.append("")
     L += ["## B. Stability detection", "",
           "Does the forecast correctly say whether the real profile contains a density inversion? Positive class = unstable "
-          "profile. A model that almost never forecasts instability (FloatChat PI-BiLSTM, by design) gets high precision or "
+          "profile. A model that almost never forecasts instability (ArgoCast PI-BiLSTM, by design) gets high precision or "
           "undefined precision and low recall: most observed inversions are sensor noise or short-lived features that a "
           "10-day forecast is not meant to reproduce. Read this table together with the inversion rates in METRICS_1_7.md.", ""]
     for k, label in (("any", "any inversion"), ("0.01", "inversion larger than 0.01 kg m⁻³"),

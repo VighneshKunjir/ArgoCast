@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-"""Export a benchmark-trained FloatChat PI-BiLSTM checkpoint as the app's serving model.
+"""Export a benchmark-trained ArgoCast PI-BiLSTM checkpoint as the app's serving model.
 
 The benchmark (research/benchmark/run_benchmark.py) trains the model on
 the Arabian Sea 2000-2026 windows but stores only the network weights. This script
@@ -14,7 +14,7 @@ exactly the one evaluated in the benchmark:
 
 Usage (from backend/):
   python scripts/export_model_artifacts.py \
-      --checkpoint research/benchmark/outputs/arabian2000_chronological/models/FloatChat_PI-BiLSTM_seed42.pt \
+      --checkpoint research/benchmark/outputs/arabian2000_chronological/models/ArgoCast_PI-BiLSTM_seed42.pt \
       --proc-dir research/pipeline/data/processed --split chronological
 """
 import argparse
@@ -136,7 +136,7 @@ def main():
         "note": "Multiplies the MC-dropout std; the forecast mean is unchanged",
     }, indent=2))
     meta = {
-        "model_name": "FloatChat PI-BiLSTM",
+        "model_name": "ArgoCast PI-BiLSTM",
         "model_version": "v2.0.0-pibilstm-arabian2000",
         "architecture": "2-layer bidirectional LSTM, 128 units per direction, dropout 0.2, separate T and S heads",
         "loss": "MSE(T) + 2.5 MSE(S) + 10 stability hinge (TEOS-10 consistent) + 1.5 thermocline gradient",

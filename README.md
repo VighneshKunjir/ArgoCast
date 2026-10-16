@@ -1,8 +1,8 @@
-# FloatChat
+# ArgoCast
 
 **Physics-informed, explainable forecasting of Argo ocean temperature and salinity profiles in the Arabian Sea.**
 
-FloatChat forecasts the next temperature and salinity profile of an Argo float (16 levels, 5 to 1000 dbar, about 10 days ahead) from its three most recent profiles. Every forecast comes with:
+ArgoCast forecasts the next temperature and salinity profile of an Argo float (16 levels, 5 to 1000 dbar, about 10 days ahead) from its three most recent profiles. Every forecast comes with:
 
 - **Physical checks.** The model is trained with a TEOS-10 static-stability penalty, so it almost never puts denser water above lighter water. Each forecast is re-checked with the official `gsw` (TEOS-10) library.
 - **Calibrated uncertainty.** Monte Carlo dropout (50 passes) gives 90% and 95% intervals, rescaled on validation data so that the 95% interval really contains about 95% of observations.
@@ -16,7 +16,7 @@ FloatChat forecasts the next temperature and salinity profile of an Argo float (
 
 ## Results
 
-FloatChat PI-BiLSTM was compared with 12 baselines on 36,164 quality-controlled Argo profiles from 321 floats (Arabian Sea, 10-25 N, 50-75 E, 2001-2026), on two test sets:
+ArgoCast PI-BiLSTM was compared with 12 baselines on 36,164 quality-controlled Argo profiles from 321 floats (Arabian Sea, 10-25 N, 50-75 E, 2001-2026), on two test sets:
 
 - **Future years:** trained on data up to 2016, tested on 2019-2026 (5,177 forecasts, 97 floats).
 - **Unseen floats:** tested on 45 floats never used in training (4,341 forecasts).
@@ -28,10 +28,10 @@ FloatChat PI-BiLSTM was compared with 12 baselines on 36,164 quality-controlled 
 | LightGBM | **0.569** | 0.580 | 4.15% / 5.09% |
 | Temporal Fusion Transformer | 0.574 | 0.587 | 5.16% / 5.76% |
 | Bi-LSTM without physics loss | 0.571 | **0.579** | 5.37% / 5.46% |
-| **FloatChat PI-BiLSTM** | 0.573 | 0.580 | **0.04% / 0.02%** |
+| **ArgoCast PI-BiLSTM** | 0.573 | 0.580 | **0.04% / 0.02%** |
 | Observed profiles (reference) | | | 0.15% / 0.07% |
 
-- FloatChat is about 10% more accurate than persistence and within 0.005 °C of the most accurate model on both test sets.
+- ArgoCast is about 10% more accurate than persistence and within 0.005 °C of the most accurate model on both test sets.
 - It is the only model whose forecasts are almost always physically stable: 0.02-0.04% unstable forecasts, against 0.8-12.3% for the other learned models.
 - After calibration, its 95% intervals cover 95.0% and 95.4% of observations (raw Monte Carlo dropout: 44-47%).
 - Known trade-off: the stability penalty makes the forecast mixed layer about 4 m too shallow. A surface-stratification loss term removes most of this error but allows more small inversions (see the Benchmarks tab).
@@ -82,7 +82,7 @@ cd backend
 pytest
 ```
 
-The tests build their own temporary database, so they do not touch `backend/data/floatchat.db`.
+The tests build their own temporary database, so they do not touch `backend/data/argocast.db`.
 
 ---
 
@@ -91,7 +91,7 @@ The tests build their own temporary database, so they do not touch `backend/data
 | Tab | What it shows |
 |---|---|
 | **Profile Forecast & UQ** | Forecast temperature and salinity profiles with 90% / 95% bands, the three input profiles, persistence and Ridge baselines, and the observed profile when it exists. Below it, the evidence-link citations. |
-| **FloatChat** | Questions about the selected profile: thermocline, salinity, stability, uncertainty, explanations, mixed layer, model accuracy. |
+| **Ask ArgoCast** | Questions about the selected profile: thermocline, salinity, stability, uncertainty, explanations, mixed layer, model accuracy. |
 | **Sea Map** | All floats in the region and the recorded positions of the selected float around the forecast. The map background (bathymetry, temperature and salinity shading) is illustrative. |
 | **XAI & TEOS-10 Physics** | Integrated Gradients weights for the three input cycles, the depth-to-depth attribution matrix, and the TEOS-10 density, buoyancy frequency and stability of the forecast. |
 | **Model Benchmarks** | The full 13-model study described above. |
@@ -103,7 +103,7 @@ Select a float and a **base cycle**. The forecast is for the float's next profil
 ## Project structure
 
 ```
-FloatChat_v6/
+ArgoCast_v6/
 ├── src/                          React 19 + TypeScript web app
 │   ├── components/               one component per tab, charts in components/benchmark/
 │   ├── services/api.ts           calls to the backend
@@ -177,7 +177,7 @@ pip install -r research/requirements.txt
 4. **Serve the new model and refresh the app** (from `backend/`):
    ```bash
    python scripts/export_model_artifacts.py \
-       --checkpoint research/benchmark/outputs/arabian2000_chronological/models/FloatChat_PI-BiLSTM_seed42.pt \
+       --checkpoint research/benchmark/outputs/arabian2000_chronological/models/ArgoCast_PI-BiLSTM_seed42.pt \
        --proc-dir research/pipeline/data/processed
    python scripts/build_benchmark_summary.py
    python scripts/seed_database.py --reset --csv research/pipeline/data/processed/profiles_arabian_2000_2026.csv.gz

@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-"""FloatChat benchmark: train, evaluate and record FloatChat PI-BiLSTM and 12 comparison models.
+"""ArgoCast benchmark: train, evaluate and record ArgoCast PI-BiLSTM and 12 comparison models.
 
 Models (all forecast the full next-cycle 16-level T and S profile from 3 past cycles)
   1  Persistence               next profile = last observed profile (t-1)
@@ -13,13 +13,13 @@ Models (all forecast the full next-cycle 16-level T and S profile from 3 past cy
   8  DLinear                   trend / remainder decomposition + per-channel linear layers
   9  N-HiTS                    multi-rate pooled MLP stacks with doubly residual stacking
   10 TFT                       compact Temporal Fusion Transformer
-  Reference rows: FloatChat PI-BiLSTM (physics-informed loss) and Bi-LSTM (no physics loss), the
+  Reference rows: ArgoCast PI-BiLSTM (physics-informed loss) and Bi-LSTM (no physics loss), the
   same network trained with MSE only (ablation)
 
-All neural models use the same data loss as FloatChat without the physics terms
+All neural models use the same data loss as ArgoCast without the physics terms
 (MSE_T + 2.5 MSE_S), the same optimiser (AdamW, lr 1e-3, wd 1e-4, cosine schedule),
 gradient clipping, batch size and early stopping on validation temperature RMSE.
-Only FloatChat PI-BiLSTM adds the stability and thermocline penalties.
+Only ArgoCast PI-BiLSTM adds the stability and thermocline penalties.
 
 Data
   Windows and splits written by research/pipeline (s02_build_dataset.py, s03_split.py):
@@ -79,20 +79,20 @@ DEEP_IDX = [10, 11, 12, 13, 14, 15]
 ARCTIC_WMOS = {6903058, 6903059, 6903060, 6903062, 6903063}
 
 MODEL_ORDER = ["Persistence", "Climatology (regional)", "Climatology (local)", "Ridge", "LightGBM", "GRU", "Seq2Seq LSTM + attention",
-               "TCN", "DLinear", "N-HiTS", "TFT", "Bi-LSTM (no physics loss)", "FloatChat PI-BiLSTM"]
+               "TCN", "DLinear", "N-HiTS", "TFT", "Bi-LSTM (no physics loss)", "ArgoCast PI-BiLSTM"]
 NEURAL = ["GRU", "Seq2Seq LSTM + attention", "TCN", "DLinear", "N-HiTS", "TFT",
-          "Bi-LSTM (no physics loss)", "FloatChat PI-BiLSTM"]
-REFERENCE = "FloatChat PI-BiLSTM"
+          "Bi-LSTM (no physics loss)", "ArgoCast PI-BiLSTM"]
+REFERENCE = "ArgoCast PI-BiLSTM"
 COLORS = {
     "Persistence": "#999999", "Climatology (regional)": "#CC79A7", "Climatology (local)": "#882255", "Ridge": "#E69F00", "LightGBM": "#56B4E9",
     "GRU": "#8C6D31", "Seq2Seq LSTM + attention": "#D55E00", "TCN": "#7F3C8D", "DLinear": "#F0E442",
-    "N-HiTS": "#11A579", "TFT": "#E73F74", "Bi-LSTM (no physics loss)": "#009E73", "FloatChat PI-BiLSTM": "#0072B2",
+    "N-HiTS": "#11A579", "TFT": "#E73F74", "Bi-LSTM (no physics loss)": "#009E73", "ArgoCast PI-BiLSTM": "#0072B2",
 }
 SHORT = {"Climatology (regional)": "Clim (regional)", "Climatology (local)": "Clim (local)",
          "Seq2Seq LSTM + attention": "Seq2Seq+Attn", "Bi-LSTM (no physics loss)": "Bi-LSTM (no physics)",
-         "FloatChat PI-BiLSTM": "FloatChat PI-BiLSTM"}
+         "ArgoCast PI-BiLSTM": "ArgoCast PI-BiLSTM"}
 # Printed under every figure so that each figure is self-explanatory.
-FIG_NOTE = ("FloatChat PI-BiLSTM (proposed): physics-informed 2-layer bidirectional LSTM (128 units per direction, "
+FIG_NOTE = ("ArgoCast PI-BiLSTM (proposed): physics-informed 2-layer bidirectional LSTM (128 units per direction, "
             "dropout 0.2, separate temperature and salinity output heads), trained with MSE plus a TEOS-10 "
             "density-stability penalty (weight 10) and a thermocline-gradient penalty (weight 1.5). "
             "Bi-LSTM (no physics): the identical network trained with MSE only. All models forecast the next "
@@ -260,7 +260,7 @@ def metric_row(pT, pS, tT, tS, lat, lon):
 
 def bootstrap(preds, tT, tS, groups, B, seed=0):
     """Float-level block bootstrap with the SAME resamples for every model, so paired
-    differences (model vs FloatChat, model vs persistence) are valid."""
+    differences (model vs ArgoCast, model vs persistence) are valid."""
     rng = np.random.default_rng(seed)
     uniq, inv = np.unique(groups, return_inverse=True)
     G = len(uniq)
@@ -281,10 +281,10 @@ def bootstrap(preds, tT, tS, groups, B, seed=0):
         r["p_not_better_than_persistence"] = float((sk <= 0).mean())
         if REFERENCE in boot and m != REFERENCE:
             dT = bT - boot[REFERENCE][0]; dS = bS - boot[REFERENCE][1]
-            r["temp_rmse_diff_vs_floatchat_ci"] = q(dT)
-            r["sal_rmse_diff_vs_floatchat_ci"] = q(dS)
-            r["p_beats_floatchat_temp"] = float((dT < 0).mean())
-            r["p_beats_floatchat_sal"] = float((dS < 0).mean())
+            r["temp_rmse_diff_vs_argocast_ci"] = q(dT)
+            r["sal_rmse_diff_vs_argocast_ci"] = q(dS)
+            r["p_beats_argocast_temp"] = float((dT < 0).mean())
+            r["p_beats_argocast_sal"] = float((dS < 0).mean())
         out[m] = r
     return out
 
@@ -355,7 +355,7 @@ def make_figures(fig_dir, tag, results, extras):
     fig, ax = plt.subplots(figsize=(5.2, 3.6))
     for m in nm:
         ax.scatter(results[m]["n_params"], results[m]["temp_rmse"], s=40, color=COLORS[m], edgecolor="black", lw=0.4, zorder=3)
-        # FloatChat and its no-physics ablation share a parameter count: label one above, one below
+        # ArgoCast and its no-physics ablation share a parameter count: label one above, one below
         below = m == "Bi-LSTM (no physics loss)" and REFERENCE in results and \
             results[m]["temp_rmse"] <= results[REFERENCE]["temp_rmse"]
         above_ref = m == REFERENCE and "Bi-LSTM (no physics loss)" in results and \
@@ -635,8 +635,8 @@ DESCRIPTIONS = {
     "DLinear": "Moving-average trend/remainder split, one linear map per channel (no cross-depth mixing)",
     "N-HiTS": "Three MLP stacks (512 units) with multi-rate pooling and doubly residual stacking",
     "TFT": "Compact Temporal Fusion Transformer: variable selection, LSTM encoder, interpretable attention",
-    "Bi-LSTM (no physics loss)": "Identical network to FloatChat PI-BiLSTM, trained with MSE only (ablation of the physics terms)",
-    "FloatChat PI-BiLSTM": "Proposed model. Physics-informed 2-layer bidirectional LSTM (128 units per direction, dropout 0.2, "
+    "Bi-LSTM (no physics loss)": "Identical network to ArgoCast PI-BiLSTM, trained with MSE only (ablation of the physics terms)",
+    "ArgoCast PI-BiLSTM": "Proposed model. Physics-informed 2-layer bidirectional LSTM (128 units per direction, dropout 0.2, "
                            "separate T and S heads); loss = MSE(T) + 2.5 MSE(S) + 10 x TEOS-10 stability penalty + "
                            "1.5 x thermocline-gradient penalty",
 }
@@ -648,7 +648,7 @@ def _f(v, d=4):
 
 def write_report(p):
     R, ex = p["models"], p["extras"]
-    L = [f"# FloatChat 10-model benchmark: {p['tag']}", "",
+    L = [f"# ArgoCast 10-model benchmark: {p['tag']}", "",
          f"Finished {p['finished']}. Device: {p['environment']['device']} (Ridge and LightGBM on CPU). "
          f"Torch {p['environment']['torch']}, Python {p['environment']['python']}.", "",
          "## Data", "",
@@ -692,17 +692,17 @@ def write_report(p):
         L.append("")
 
     if REFERENCE in R:
-        L += ["## Paired comparison against FloatChat PI-BiLSTM", "",
-              "Difference = model RMSE - FloatChat PI-BiLSTM RMSE (negative means the model is more accurate). "
+        L += ["## Paired comparison against ArgoCast PI-BiLSTM", "",
+              "Difference = model RMSE - ArgoCast PI-BiLSTM RMSE (negative means the model is more accurate). "
               "P(beats) = share of bootstrap resamples in which the model has lower RMSE.", "",
-              "| Model | ΔTemp RMSE [95% CI] | P(beats FloatChat PI-BiLSTM, T) | ΔSal RMSE [95% CI] | P(beats FloatChat PI-BiLSTM, S) | Inversions (%) vs FloatChat PI-BiLSTM |",
+              "| Model | ΔTemp RMSE [95% CI] | P(beats ArgoCast PI-BiLSTM, T) | ΔSal RMSE [95% CI] | P(beats ArgoCast PI-BiLSTM, S) | Inversions (%) vs ArgoCast PI-BiLSTM |",
               "|---|---|---|---|---|---|"]
         fc_inv = R[REFERENCE]["inversion_teos10_pct"]
         for m in [m for m in MODEL_ORDER if m in R and m != REFERENCE]:
             r = R[m]
-            L.append(f"| {m} | {r['temp_rmse_diff_vs_floatchat_ci'][0]:+.4f} to {r['temp_rmse_diff_vs_floatchat_ci'][1]:+.4f} | "
-                     f"{r['p_beats_floatchat_temp']:.2f} | {r['sal_rmse_diff_vs_floatchat_ci'][0]:+.4f} to "
-                     f"{r['sal_rmse_diff_vs_floatchat_ci'][1]:+.4f} | {r['p_beats_floatchat_sal']:.2f} | "
+            L.append(f"| {m} | {r['temp_rmse_diff_vs_argocast_ci'][0]:+.4f} to {r['temp_rmse_diff_vs_argocast_ci'][1]:+.4f} | "
+                     f"{r['p_beats_argocast_temp']:.2f} | {r['sal_rmse_diff_vs_argocast_ci'][0]:+.4f} to "
+                     f"{r['sal_rmse_diff_vs_argocast_ci'][1]:+.4f} | {r['p_beats_argocast_sal']:.2f} | "
                      f"{r['inversion_teos10_pct']:.2f} vs {fc_inv:.2f} |")
         L.append("")
 
@@ -753,7 +753,7 @@ def write_combined(out_root: Path):
     runs = sorted(p for p in out_root.glob("*/metrics.json"))
     if not runs:
         return None
-    L = ["# FloatChat 10-model benchmark: combined results", "",
+    L = ["# ArgoCast 10-model benchmark: combined results", "",
          "Each section links to the full record for that dataset and split (`<run>/RESULTS.md`).", ""]
     for f in runs:
         p = json.loads(f.read_text())

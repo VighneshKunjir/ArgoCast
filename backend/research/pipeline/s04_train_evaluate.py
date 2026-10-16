@@ -6,8 +6,8 @@ Models (all predict the full 16-level T and S profile of the next cycle)
   Climatology          monthly mean profile of the training targets
   Ridge                linear regression on the 96 inputs (alpha = 1)
   Gradient Boosting    HistGradientBoosting, one regressor per output (32)
-  Bi-LSTM (MSE only)   FloatChat architecture, loss without physics terms (ablation)
-  FloatChat Bi-LSTM    FloatChat architecture + full physics-constrained loss
+  Bi-LSTM (MSE only)   ArgoCast architecture, loss without physics terms (ablation)
+  ArgoCast Bi-LSTM    ArgoCast architecture + full physics-constrained loss
 
 Neural models are trained with several seeds (default 42, 43, 44); tables report
 mean +/- std over seeds. Confidence intervals, per-depth and per-season results
@@ -16,7 +16,7 @@ not cherry-picked. 95 % CIs come from a float-level block bootstrap (1000
 resamples): floats, not windows, are resampled because windows of one float are
 correlated.
 
-Monte-Carlo dropout (50 passes) is run for the FloatChat model to check whether
+Monte-Carlo dropout (50 passes) is run for the ArgoCast model to check whether
 its 90 % / 95 % intervals contain the truth as often as they claim.
 
 Outputs: outputs/tables/metrics_*.json|csv, outputs/predictions/*.npz,
@@ -46,8 +46,8 @@ from app.ml.model import PhysicsInformedBiLSTM
 
 SPLITS = ["chronological", "unseen_floats"]
 MODEL_ORDER = ["Persistence", "Climatology", "Ridge", "Gradient Boosting",
-               "Bi-LSTM (MSE only)", "FloatChat Bi-LSTM"]
-DL_MODELS = {"Bi-LSTM (MSE only)": False, "FloatChat Bi-LSTM": True}
+               "Bi-LSTM (MSE only)", "ArgoCast Bi-LSTM"]
+DL_MODELS = {"Bi-LSTM (MSE only)": False, "ArgoCast Bi-LSTM": True}
 
 
 # ------------------------------------------------------------------ data
@@ -258,7 +258,7 @@ def run_split(name, args, device):
                 preds[mname] = (pT, pS)
                 histories[mname] = hist
                 timings[mname] = el
-                tag = "floatchat" if physics else "bilstm_mse"
+                tag = "argocast" if physics else "bilstm_mse"
                 torch.save(model.state_dict(), MODEL_DIR / f"{tag}_{name}_seed{seed}.pt")
                 if physics:
                     mT, mS = mc_dropout(model, Xte_t, args.mc_passes)
@@ -368,7 +368,7 @@ def figures(name, parts, preds, results, uq, histories, mc):
             ax.legend(fontsize=7)
         ax.set_xticks(range(len(models)))
         short = {"Gradient Boosting": "Grad. Boosting", "Bi-LSTM (MSE only)": "Bi-LSTM (MSE)",
-                 "FloatChat Bi-LSTM": "FloatChat"}
+                 "ArgoCast Bi-LSTM": "ArgoCast"}
         ax.set_xticklabels([short.get(m, m) for m in models], fontsize=7, rotation=35, ha="right")
         ax.set_ylabel(lab)
     fig.suptitle(f"Test-set accuracy and physical consistency - {name.replace('_', ' ')} split "
@@ -379,7 +379,7 @@ def figures(name, parts, preds, results, uq, histories, mc):
     # Per-depth RMSE
     fig, axes = plt.subplots(1, 3, figsize=(10, 4.2), sharey=True)
     for m in models:
-        st = dict(color=PALETTE[m], lw=2.0 if "FloatChat" in m else 1.1, ls="-" if m != "Persistence" else "--")
+        st = dict(color=PALETTE[m], lw=2.0 if "ArgoCast" in m else 1.1, ls="-" if m != "Persistence" else "--")
         axes[0].plot(results[m]["per_depth_temp_rmse"], depth, label=m, **st)
         axes[1].plot(results[m]["per_depth_sal_rmse"], depth, **st)
         if m != "Persistence":
@@ -438,7 +438,7 @@ def figures(name, parts, preds, results, uq, histories, mc):
     savefig(fig, f"fig_uq_calibration_{name}")
 
     # Scatter at 100 dbar
-    cand = [m for m in ["Gradient Boosting", "FloatChat Bi-LSTM"] if m in preds]
+    cand = [m for m in ["Gradient Boosting", "ArgoCast Bi-LSTM"] if m in preds]
     fig, axes = plt.subplots(1, len(cand), figsize=(3.6 * len(cand), 3.4), squeeze=False)
     for ax, m in zip(axes[0], cand):
         ax.scatter(tT[:, 4], preds[m][0][:, 4], s=2, alpha=0.3, color=PALETTE[m])
@@ -449,9 +449,9 @@ def figures(name, parts, preds, results, uq, histories, mc):
     fig.tight_layout()
     savefig(fig, f"fig_scatter_100dbar_{name}")
 
-    # Example forecast with MC band (window with median FloatChat error)
-    if "FloatChat Bi-LSTM" in preds:
-        e = ((preds["FloatChat Bi-LSTM"][0] - tT) ** 2).mean(1)
+    # Example forecast with MC band (window with median ArgoCast error)
+    if "ArgoCast Bi-LSTM" in preds:
+        e = ((preds["ArgoCast Bi-LSTM"][0] - tT) ** 2).mean(1)
         i = int(np.argsort(e)[len(e) // 2])
         md = te["meta"].iloc[i]
         fig, axes = plt.subplots(1, 2, figsize=(7, 4.2), sharey=True)
@@ -459,7 +459,7 @@ def figures(name, parts, preds, results, uq, histories, mc):
             truth = tT[i] if v == "T" else tS[i]
             ax.fill_betweenx(depth, mc[f"q025{v}"][i], mc[f"q975{v}"][i], color="#0072B2", alpha=0.2, label="95% MC interval")
             ax.plot(truth, depth, "k-o", ms=3, label="Observed")
-            ax.plot(preds["FloatChat Bi-LSTM"][k][i], depth, color="#0072B2", lw=2, label="FloatChat")
+            ax.plot(preds["ArgoCast Bi-LSTM"][k][i], depth, color="#0072B2", lw=2, label="ArgoCast")
             ax.plot(preds["Persistence"][k][i], depth, color="#999999", ls="--", label="Persistence")
             ax.set_xlabel(f"{'Temperature' if v=='T' else 'Salinity'} ({unit})")
         axes[0].set_ylim(1020, 0); axes[0].set_ylabel("Pressure (dbar)"); axes[0].legend(fontsize=7)

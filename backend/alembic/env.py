@@ -18,9 +18,9 @@ database_url = os.getenv("DATABASE_URL")
 if database_url:
     config.set_main_option("sqlalchemy.url", database_url)
 else:
-    # Default to SQLite in backend/data/floatchat.db
+    # Default to SQLite in backend/data/argocast.db
     BACKEND_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-    DEFAULT_DB_PATH = os.path.join(BACKEND_DIR, "data", "floatchat.db")
+    DEFAULT_DB_PATH = os.path.join(BACKEND_DIR, "data", "argocast.db")
     config.set_main_option("sqlalchemy.url", f"sqlite:///{DEFAULT_DB_PATH}")
 
 if config.config_file_name is not None:

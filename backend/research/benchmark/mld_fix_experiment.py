@@ -1,10 +1,10 @@
 #!/usr/bin/env python
-"""Mixed-layer-depth fix experiment for FloatChat PI-BiLSTM.
+"""Mixed-layer-depth fix experiment for ArgoCast PI-BiLSTM.
 
-Finding from the 10-model benchmark: FloatChat PI-BiLSTM has the largest mixed layer depth
+Finding from the 10-model benchmark: ArgoCast PI-BiLSTM has the largest mixed layer depth
 (MLD) error of the learned models, with a shallow bias. Diagnosis: in 39-45% of observed test
 profiles the density between 5 and 20 dbar is almost uniform (a well-mixed surface layer), but
-FloatChat forecasts this in only 0.1-0.2% of cases; in ~95% of its forecasts density rises by
+ArgoCast forecasts this in only 0.1-0.2% of cases; in ~95% of its forecasts density rises by
 more than 0.03 kg m-3 between 5 and 20 dbar. The stability penalty max(0, -dsigma/dz) is zero
 for any stable profile, but forecasts near dsigma = 0 risk tipping negative, so the network
 learns to keep a safety margin of stratification everywhere, including inside the mixed layer.
@@ -15,7 +15,7 @@ validation and test windows.
 
 Variants (all keep MSE(T) + 2.5 MSE(S) + 1.5 thermocline term unless stated)
   no_physics        stability weight 0 (reference: the ablation row of the benchmark)
-  baseline          stability weight 10, no tolerance (the current FloatChat PI-BiLSTM)
+  baseline          stability weight 10, no tolerance (the current ArgoCast PI-BiLSTM)
   tol_0.01          stability penalty ignores density drops smaller than 0.01 kg m-3 per interval
   tol_0.03          same with 0.03 kg m-3 (the MLD threshold)
   weight_1          stability weight 1 instead of 10
@@ -72,7 +72,7 @@ VARIANTS = {
 }
 LABELS = {
     "no_physics": "No physics loss (ablation)",
-    "baseline": "FloatChat PI-BiLSTM (current loss)",
+    "baseline": "ArgoCast PI-BiLSTM (current loss)",
     "tol_0.01": "Stability tolerance 0.01 kg m-3",
     "tol_0.03": "Stability tolerance 0.03 kg m-3",
     "weight_1": "Stability weight 1 (instead of 10)",
@@ -86,7 +86,7 @@ COLORS = {"no_physics": "#009E73", "baseline": "#0072B2", "tol_0.01": "#E69F00",
 
 
 class VariantLoss(PhysicsConstrainedLoss):
-    """FloatChat loss with an optional stability tolerance and surface stratification term."""
+    """ArgoCast loss with an optional stability tolerance and surface stratification term."""
 
     def __init__(self, tol=0.0, lam_surf=0.0, **kw):
         super().__init__(**kw)
@@ -220,11 +220,11 @@ def select(df_split):
 
 def report(df, obs, selected, args):
     f = lambda x, d=4: "-" if pd.isna(x) else f"{x:.{d}f}"
-    L = ["# Mixed layer depth fix experiment: FloatChat PI-BiLSTM loss variants", "",
+    L = ["# Mixed layer depth fix experiment: ArgoCast PI-BiLSTM loss variants", "",
          f"Finished {time.strftime('%Y-%m-%d %H:%M:%S')}. Seeds {args.seeds}; same data, splits, optimiser and early "
          "stopping as run_benchmark.py. Values are means over seeds (± std where shown).", "",
          "## Why this experiment", "",
-         "In the benchmark, FloatChat PI-BiLSTM had the largest MLD error of the learned models, with a shallow bias. In "
+         "In the benchmark, ArgoCast PI-BiLSTM had the largest MLD error of the learned models, with a shallow bias. In "
          "observed profiles the density between 5 and 20 dbar is often almost uniform (well-mixed surface layer); the "
          "current model almost never forecasts this and instead keeps a margin of stratification everywhere, because the "
          "stability penalty max(0, -dsigma/dz) punishes any forecast that tips slightly negative.", "",

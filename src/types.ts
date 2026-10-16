@@ -211,7 +211,7 @@ export interface BenchmarkRow {
   seed_inv_any_mean: number | null;
   seed_inv_any_std: number | null;
   seed_mld_rmse_mean: number | null;
-  diff_vs_floatchat_ci: [number, number] | null;
+  diff_vs_argocast_ci: [number, number] | null;
 }
 
 export interface BenchmarkUQ {

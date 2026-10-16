@@ -281,7 +281,7 @@ async def run_forecast(request: dict, background_tasks: BackgroundTasks):
         metrics_comparison = [
             row("Persistence (t-1)", pers_temps, pers_sals),
             row("Ridge regression", ridge_temps, ridge_sals),
-            row("FloatChat PI-BiLSTM", temp_pred, sal_pred),
+            row("ArgoCast PI-BiLSTM", temp_pred, sal_pred),
         ] if has_obs else []
 
         response = {

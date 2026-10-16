@@ -1,5 +1,5 @@
 """
-Integrated Gradients explanations for the FloatChat PI-BiLSTM.
+Integrated Gradients explanations for the ArgoCast PI-BiLSTM.
 
 For one forecast this module computes, with Captum's IntegratedGradients:
 

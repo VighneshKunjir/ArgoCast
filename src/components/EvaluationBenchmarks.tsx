@@ -11,7 +11,7 @@ interface EvaluationBenchmarksProps {
 }
 
 type SplitKey = 'chronological' | 'unseen_floats';
-const PROPOSED = 'FloatChat PI-BiLSTM';
+const PROPOSED = 'ArgoCast PI-BiLSTM';
 const NO_PHYS = 'Bi-LSTM (no physics loss)';
 const CLIM = ['Climatology (regional)', 'Climatology (local)'];
 
@@ -228,7 +228,7 @@ export const EvaluationBenchmarks: React.FC<EvaluationBenchmarksProps> = ({ fore
               </thead>
               <tbody className="divide-y divide-slate-100 font-mono">
                 {forecast.metrics_comparison.map((m) => {
-                  const ours = m.model.includes('FloatChat');
+                  const ours = m.model.includes('ArgoCast');
                   return (
                     <tr key={m.model} className={ours ? 'bg-cyan-50/60 font-semibold' : ''}>
                       <td className="px-3 py-2 text-left font-sans text-slate-900">{m.model}</td>
@@ -279,7 +279,7 @@ export const EvaluationBenchmarks: React.FC<EvaluationBenchmarksProps> = ({ fore
         <Card
           title="Accuracy vs physical consistency"
           icon={<Target className="w-4 h-4 text-indigo-600" />}
-          subtitle="Each dot is a model (hover for details); down-left is better on both. The learned models reach similar accuracy, but only FloatChat also stays physically consistent. The two climatologies are left out (temperature RMSE above 0.8 °C)."
+          subtitle="Each dot is a model (hover for details); down-left is better on both. The learned models reach similar accuracy, but only ArgoCast also stays physically consistent. The two climatologies are left out (temperature RMSE above 0.8 °C)."
         >
           <ScatterChart
             points={names.filter((n) => !CLIM.includes(n)).map((n) => ({
@@ -316,7 +316,7 @@ export const EvaluationBenchmarks: React.FC<EvaluationBenchmarksProps> = ({ fore
       >
         <div className="grid grid-cols-1 lg:grid-cols-5 gap-5 items-start">
           <div className="lg:col-span-2">
-            <div className="text-[11px] font-semibold text-slate-700 mb-1">FloatChat PI-BiLSTM, temperature</div>
+            <div className="text-[11px] font-semibold text-slate-700 mb-1">ArgoCast PI-BiLSTM, temperature</div>
             {uqFc && <ReliabilityChart nominal={s.reliability_nominal} raw={uqFc.reliability_raw} cal={uqFc.reliability_cal} />}
           </div>
           <div className="lg:col-span-3 overflow-x-auto">
@@ -352,7 +352,7 @@ export const EvaluationBenchmarks: React.FC<EvaluationBenchmarksProps> = ({ fore
       <Card
         title="All metrics"
         icon={<BookOpen className="w-4 h-4 text-slate-600" />}
-        subtitle="Click a column header to sort. The best value in each column (climatologies excluded) is in bold green; FloatChat is the highlighted row. Hover a temperature RMSE to see its 95% bootstrap interval."
+        subtitle="Click a column header to sort. The best value in each column (climatologies excluded) is in bold green; ArgoCast is the highlighted row. Hover a temperature RMSE to see its 95% bootstrap interval."
       >
         <div className="overflow-x-auto">
           <table className="min-w-full text-xs">
@@ -412,8 +412,8 @@ export const EvaluationBenchmarks: React.FC<EvaluationBenchmarksProps> = ({ fore
         </div>
         <p className="text-[11px] text-slate-500 mt-2 leading-relaxed">
           {best === PROPOSED
-            ? 'FloatChat has the lowest temperature RMSE on this test set. '
-            : `FloatChat is ${f3(fc.temp_rmse - rows[best].temp_rmse)} °C behind the most accurate model (${short[best]}) on temperature RMSE. `}
+            ? 'ArgoCast has the lowest temperature RMSE on this test set. '
+            : `ArgoCast is ${f3(fc.temp_rmse - rows[best].temp_rmse)} °C behind the most accurate model (${short[best]}) on temperature RMSE. `}
           Small inversions below 0.01 kg/m³ are common in raw observations ({f1(s.observed.inv_any_pct)}% of profiles), which is why the 0.03 kg/m³ threshold is the headline number.
         </p>
       </Card>
@@ -423,7 +423,7 @@ export const EvaluationBenchmarks: React.FC<EvaluationBenchmarksProps> = ({ fore
         <Card
           title="Ocean quantities computed from the forecasts"
           icon={<FlaskConical className="w-4 h-4 text-purple-600" />}
-          subtitle="Errors in quantities oceanographers use. FloatChat matches the best models for D20 and heat content; mixed layer depth is its weak point."
+          subtitle="Errors in quantities oceanographers use. ArgoCast matches the best models for D20 and heat content; mixed layer depth is its weak point."
         >
           <div className="overflow-x-auto">
             <table className="min-w-full text-xs">
@@ -542,7 +542,7 @@ export const EvaluationBenchmarks: React.FC<EvaluationBenchmarksProps> = ({ fore
         <Card
           title="Explanation methods compared"
           icon={<Brain className="w-4 h-4 text-indigo-600" />}
-          subtitle={`${xai.target}, ${xai.n_windows} test forecasts. FloatChat uses Integrated Gradients; LIME and KernelSHAP were run on the same forecasts for comparison.`}
+          subtitle={`${xai.target}, ${xai.n_windows} test forecasts. ArgoCast uses Integrated Gradients; LIME and KernelSHAP were run on the same forecasts for comparison.`}
         >
           <div className="overflow-x-auto">
             <table className="min-w-full text-xs">

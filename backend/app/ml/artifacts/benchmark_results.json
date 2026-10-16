@@ -1,6 +1,6 @@
 {
  "generated": "2026-10-16",
- "proposed_model": "FloatChat PI-BiLSTM",
+ "proposed_model": "ArgoCast PI-BiLSTM",
  "depths_dbar": [
   5,
   20,
@@ -123,13 +123,13 @@
    "name": "Bi-LSTM (no physics loss)",
    "short": "Bi-LSTM (no physics)",
    "family": "Deep learning",
-   "description": "Same network as FloatChat, trained on error only (ablation).",
+   "description": "Same network as ArgoCast, trained on error only (ablation).",
    "color": "#009E73",
    "proposed": false
   },
   {
-   "name": "FloatChat PI-BiLSTM",
-   "short": "FloatChat PI-BiLSTM",
+   "name": "ArgoCast PI-BiLSTM",
+   "short": "ArgoCast PI-BiLSTM",
    "family": "Deep learning + physics",
    "description": "2-layer bidirectional LSTM with a TEOS-10 density-stability penalty (proposed).",
    "color": "#0072B2",
@@ -187,7 +187,7 @@
      "seed_inv_any_mean": null,
      "seed_inv_any_std": null,
      "seed_mld_rmse_mean": null,
-     "diff_vs_floatchat_ci": [
+     "diff_vs_argocast_ci": [
       0.0557,
       0.07
      ]
@@ -228,7 +228,7 @@
      "seed_inv_any_mean": null,
      "seed_inv_any_std": null,
      "seed_mld_rmse_mean": null,
-     "diff_vs_floatchat_ci": [
+     "diff_vs_argocast_ci": [
       0.5748,
       0.7253
      ]
@@ -269,7 +269,7 @@
      "seed_inv_any_mean": null,
      "seed_inv_any_std": null,
      "seed_mld_rmse_mean": null,
-     "diff_vs_floatchat_ci": [
+     "diff_vs_argocast_ci": [
       0.2064,
       0.2765
      ]
@@ -310,7 +310,7 @@
      "seed_inv_any_mean": null,
      "seed_inv_any_std": null,
      "seed_mld_rmse_mean": null,
-     "diff_vs_floatchat_ci": [
+     "diff_vs_argocast_ci": [
       0.002,
       0.0121
      ]
@@ -351,7 +351,7 @@
      "seed_inv_any_mean": null,
      "seed_inv_any_std": null,
      "seed_mld_rmse_mean": null,
-     "diff_vs_floatchat_ci": [
+     "diff_vs_argocast_ci": [
       -0.0072,
       -0.0004
      ]
@@ -392,7 +392,7 @@
      "seed_inv_any_mean": 12.768,
      "seed_inv_any_std": 1.782,
      "seed_mld_rmse_mean": 19.11,
-     "diff_vs_floatchat_ci": [
+     "diff_vs_argocast_ci": [
       0.0,
       0.0048
      ]
@@ -433,7 +433,7 @@
      "seed_inv_any_mean": 15.195,
      "seed_inv_any_std": 1.716,
      "seed_mld_rmse_mean": 18.27,
-     "diff_vs_floatchat_ci": [
+     "diff_vs_argocast_ci": [
       -0.0018,
       0.0035
      ]
@@ -474,7 +474,7 @@
      "seed_inv_any_mean": 7.797,
      "seed_inv_any_std": 1.207,
      "seed_mld_rmse_mean": 19.6,
-     "diff_vs_floatchat_ci": [
+     "diff_vs_argocast_ci": [
       0.0054,
       0.0129
      ]
@@ -515,7 +515,7 @@
      "seed_inv_any_mean": 29.837,
      "seed_inv_any_std": 1.274,
      "seed_mld_rmse_mean": 16.41,
-     "diff_vs_floatchat_ci": [
+     "diff_vs_argocast_ci": [
       0.0247,
       0.0373
      ]
@@ -556,7 +556,7 @@
      "seed_inv_any_mean": 19.748,
      "seed_inv_any_std": 11.302,
      "seed_mld_rmse_mean": 19.3,
-     "diff_vs_floatchat_ci": [
+     "diff_vs_argocast_ci": [
       -0.0014,
       0.007
      ]
@@ -597,7 +597,7 @@
      "seed_inv_any_mean": 14.403,
      "seed_inv_any_std": 2.498,
      "seed_mld_rmse_mean": 18.63,
-     "diff_vs_floatchat_ci": [
+     "diff_vs_argocast_ci": [
       -0.0019,
       0.0042
      ]
@@ -638,12 +638,12 @@
      "seed_inv_any_mean": 15.041,
      "seed_inv_any_std": 2.956,
      "seed_mld_rmse_mean": 17.89,
-     "diff_vs_floatchat_ci": [
+     "diff_vs_argocast_ci": [
       -0.0039,
       0.0008
      ]
     },
-    "FloatChat PI-BiLSTM": {
+    "ArgoCast PI-BiLSTM": {
      "temp_rmse": 0.5728,
      "temp_rmse_ci": [
       0.5419,
@@ -679,7 +679,7 @@
      "seed_inv_any_mean": 0.283,
      "seed_inv_any_std": 0.087,
      "seed_mld_rmse_mean": 22.4,
-     "diff_vs_floatchat_ci": null
+     "diff_vs_argocast_ci": null
     }
    },
    "per_depth_temp_rmse": {
@@ -899,7 +899,7 @@
      0.171,
      0.161
     ],
-    "FloatChat PI-BiLSTM": [
+    "ArgoCast PI-BiLSTM": [
      0.5625,
      0.5758,
      0.8789,
@@ -1135,7 +1135,7 @@
      0.0263,
      0.0225
     ],
-    "FloatChat PI-BiLSTM": [
+    "ArgoCast PI-BiLSTM": [
      0.2398,
      0.2045,
      0.1681,
@@ -1227,7 +1227,7 @@
      "Summer monsoon (JJAS)": 0.6067,
      "Fall inter-monsoon (ON)": 0.6039
     },
-    "FloatChat PI-BiLSTM": {
+    "ArgoCast PI-BiLSTM": {
      "Winter monsoon (DJF)": 0.5343,
      "Spring inter-monsoon (MAM)": 0.5394,
      "Summer monsoon (JJAS)": 0.6075,
@@ -1439,7 +1439,7 @@
       91.45
      ]
     },
-    "FloatChat PI-BiLSTM": {
+    "ArgoCast PI-BiLSTM": {
      "coverage95_raw": 43.75,
      "coverage95_cal": 95.04,
      "coverage90_raw": 37.72,
@@ -1546,7 +1546,7 @@
      "seed_inv_any_mean": null,
      "seed_inv_any_std": null,
      "seed_mld_rmse_mean": null,
-     "diff_vs_floatchat_ci": [
+     "diff_vs_argocast_ci": [
       0.0541,
       0.0929
      ]
@@ -1587,7 +1587,7 @@
      "seed_inv_any_mean": null,
      "seed_inv_any_std": null,
      "seed_mld_rmse_mean": null,
-     "diff_vs_floatchat_ci": [
+     "diff_vs_argocast_ci": [
       0.6908,
       0.8643
      ]
@@ -1628,7 +1628,7 @@
      "seed_inv_any_mean": null,
      "seed_inv_any_std": null,
      "seed_mld_rmse_mean": null,
-     "diff_vs_floatchat_ci": [
+     "diff_vs_argocast_ci": [
       0.292,
       0.3943
      ]
@@ -1669,7 +1669,7 @@
      "seed_inv_any_mean": null,
      "seed_inv_any_std": null,
      "seed_mld_rmse_mean": null,
-     "diff_vs_floatchat_ci": [
+     "diff_vs_argocast_ci": [
       0.0046,
       0.026
      ]
@@ -1710,7 +1710,7 @@
      "seed_inv_any_mean": null,
      "seed_inv_any_std": null,
      "seed_mld_rmse_mean": null,
-     "diff_vs_floatchat_ci": [
+     "diff_vs_argocast_ci": [
       -0.0035,
       0.0044
      ]
@@ -1751,7 +1751,7 @@
      "seed_inv_any_mean": 13.714,
      "seed_inv_any_std": 0.79,
      "seed_mld_rmse_mean": 21.82,
-     "diff_vs_floatchat_ci": [
+     "diff_vs_argocast_ci": [
       0.0033,
       0.0121
      ]
@@ -1792,7 +1792,7 @@
      "seed_inv_any_mean": 13.63,
      "seed_inv_any_std": 1.179,
      "seed_mld_rmse_mean": 21.81,
-     "diff_vs_floatchat_ci": [
+     "diff_vs_argocast_ci": [
       -0.0003,
       0.0059
      ]
@@ -1833,7 +1833,7 @@
      "seed_inv_any_mean": 11.188,
      "seed_inv_any_std": 1.345,
      "seed_mld_rmse_mean": 22.83,
-     "diff_vs_floatchat_ci": [
+     "diff_vs_argocast_ci": [
       0.0095,
       0.0184
      ]
@@ -1874,7 +1874,7 @@
      "seed_inv_any_mean": 30.323,
      "seed_inv_any_std": 1.581,
      "seed_mld_rmse_mean": 17.09,
-     "diff_vs_floatchat_ci": [
+     "diff_vs_argocast_ci": [
       0.0288,
       0.0506
      ]
@@ -1915,7 +1915,7 @@
      "seed_inv_any_mean": 19.489,
      "seed_inv_any_std": 2.0,
      "seed_mld_rmse_mean": 21.3,
-     "diff_vs_floatchat_ci": [
+     "diff_vs_argocast_ci": [
       0.0038,
       0.0118
      ]
@@ -1956,7 +1956,7 @@
      "seed_inv_any_mean": 14.528,
      "seed_inv_any_std": 1.589,
      "seed_mld_rmse_mean": 22.17,
-     "diff_vs_floatchat_ci": [
+     "diff_vs_argocast_ci": [
       0.0042,
       0.0107
      ]
@@ -1997,12 +1997,12 @@
      "seed_inv_any_mean": 15.496,
      "seed_inv_any_std": 1.449,
      "seed_mld_rmse_mean": 20.84,
-     "diff_vs_floatchat_ci": [
+     "diff_vs_argocast_ci": [
       -0.0014,
       -0.0003
      ]
     },
-    "FloatChat PI-BiLSTM": {
+    "ArgoCast PI-BiLSTM": {
      "temp_rmse": 0.5798,
      "temp_rmse_ci": [
       0.5219,
@@ -2038,7 +2038,7 @@
      "seed_inv_any_mean": 0.338,
      "seed_inv_any_std": 0.203,
      "seed_mld_rmse_mean": 24.93,
-     "diff_vs_floatchat_ci": null
+     "diff_vs_argocast_ci": null
     }
    },
    "per_depth_temp_rmse": {
@@ -2258,7 +2258,7 @@
      0.2001,
      0.1962
     ],
-    "FloatChat PI-BiLSTM": [
+    "ArgoCast PI-BiLSTM": [
      0.5409,
      0.6667,
      0.8356,
@@ -2494,7 +2494,7 @@
      0.0355,
      0.0331
     ],
-    "FloatChat PI-BiLSTM": [
+    "ArgoCast PI-BiLSTM": [
      0.1879,
      0.1741,
      0.1528,
@@ -2586,7 +2586,7 @@
      "Summer monsoon (JJAS)": 0.6344,
      "Fall inter-monsoon (ON)": 0.5857
     },
-    "FloatChat PI-BiLSTM": {
+    "ArgoCast PI-BiLSTM": {
      "Winter monsoon (DJF)": 0.5861,
      "Spring inter-monsoon (MAM)": 0.4797,
      "Summer monsoon (JJAS)": 0.6352,
@@ -2798,7 +2798,7 @@
       92.58
      ]
     },
-    "FloatChat PI-BiLSTM": {
+    "ArgoCast PI-BiLSTM": {
      "coverage95_raw": 47.31,
      "coverage95_cal": 95.42,
      "coverage90_raw": 41.09,
@@ -2860,7 +2860,7 @@
   "variants": [
    {
     "id": "baseline",
-    "label": "Current loss (FloatChat)",
+    "label": "Current loss (ArgoCast)",
     "lam_stab": 10.0,
     "tol": 0.0,
     "lam_surf": 0.0,
@@ -3107,8 +3107,8 @@
   },
   "depth_matrix_similarity": {
    "LIME vs SHAP": 0.983,
-   "LIME vs FloatChat IG": 0.992,
-   "SHAP vs FloatChat IG": 0.979
+   "LIME vs ArgoCast IG": 0.992,
+   "SHAP vs ArgoCast IG": 0.979
   }
  },
  "summary": {

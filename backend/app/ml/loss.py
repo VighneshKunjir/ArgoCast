@@ -1,5 +1,5 @@
 """
-Physics-Constrained Loss Function for FloatChat Bi-LSTM
+Physics-Constrained Loss Function for ArgoCast Bi-LSTM
 
 Implements composite loss:
 L = MSE(T) + 2.5*MSE(S) + 10.0*L_stability + 1.5*L_therm

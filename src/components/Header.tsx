@@ -16,7 +16,7 @@ export const Header: React.FC<HeaderProps> = ({
 }) => {
   const tabs = [
     { id: 'forecast', label: 'Profile Forecast & UQ' },
-    { id: 'chat', label: 'FloatChat' },
+    { id: 'chat', label: 'Ask ArgoCast' },
     { id: 'trajectory', label: 'Sea Map' },
     { id: 'xai', label: 'XAI & TEOS-10 Physics' },
     { id: 'evaluation', label: 'Model Benchmarks' },
@@ -34,7 +34,7 @@ export const Header: React.FC<HeaderProps> = ({
             <div>
               <div className="flex items-center space-x-2">
                 <h1 className="text-xl font-bold tracking-tight text-white flex items-center gap-2">
-                  FloatChat
+                  ArgoCast
                 </h1>
               </div>
               <p className="text-xs text-slate-400 mt-0.5">

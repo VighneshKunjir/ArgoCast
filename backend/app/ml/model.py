@@ -119,15 +119,15 @@ def get_device() -> torch.device:
     """
     if torch.cuda.is_available():
         device = torch.device("cuda")
-        print(f"[FloatChat ML] Using CUDA: {torch.cuda.get_device_name(0)}")
+        print(f"[ArgoCast ML] Using CUDA: {torch.cuda.get_device_name(0)}")
         # Enable cuDNN benchmark for optimized convolutions
         torch.backends.cudnn.benchmark = True
     elif hasattr(torch.backends, "mps") and torch.backends.mps.is_available():
         device = torch.device("mps")
-        print("[FloatChat ML] Using Apple Silicon MPS")
+        print("[ArgoCast ML] Using Apple Silicon MPS")
     else:
         device = torch.device("cpu")
-        print("[FloatChat ML] Using CPU (fallback)")
+        print("[ArgoCast ML] Using CPU (fallback)")
     return device
 
 

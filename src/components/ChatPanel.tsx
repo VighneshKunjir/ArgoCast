@@ -22,7 +22,7 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
       id: 'init_welcome',
       sender: 'assistant',
       timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-      content: `Hello, I am **FloatChat**. 
+      content: `Hello, I am **ArgoCast**. 
 
 I provide explainable, evidence-linked forecasting for Argo temperature and salinity profiles across the Arabian Sea (Indian Ocean). 
 
@@ -120,7 +120,7 @@ What oceanographic query would you like to explore regarding **Float ${forecast.
           </div>
           <div>
             <h3 className="text-sm font-bold text-slate-900 flex items-center gap-1.5">
-              FloatChat Scientific Dialogue Agent
+              ArgoCast Scientific Dialogue Agent
               <span className="text-[10px] bg-cyan-100 text-cyan-800 font-mono px-1.5 py-0.5 rounded font-medium">
                 RAG Grounded
               </span>
@@ -163,7 +163,7 @@ What oceanographic query would you like to explore regarding **Float ${forecast.
                 {isAssistant && (
                   <div className="flex items-center justify-between pb-2 mb-2 border-b border-slate-200/80">
                     <span className="font-bold text-slate-900 text-[11px] flex items-center gap-1">
-                      FloatChat
+                      ArgoCast
                     </span>
                     {msg.grounding_verified && (
                       <span className="inline-flex items-center gap-1 text-[10px] text-emerald-700 bg-emerald-100/80 px-2 py-0.5 rounded-full font-medium">
@@ -328,7 +328,7 @@ What oceanographic query would you like to explore regarding **Float ${forecast.
             type="text"
             value={inputQuery}
             onChange={(e) => setInputQuery(e.target.value)}
-            placeholder={`Ask FloatChat about Float ${forecast.target_float_id} (e.g. thermocline shoaling, salinity veins, physical stability)...`}
+            placeholder={`Ask ArgoCast about Float ${forecast.target_float_id} (e.g. thermocline shoaling, salinity veins, physical stability)...`}
             className="flex-1 bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-xs text-slate-900 focus:outline-hidden focus:ring-2 focus:ring-cyan-500 font-medium"
             disabled={isLoading}
           />
